@@ -7,13 +7,26 @@ import numpy.typing as npt
 
 from .math import *
 
-TableIndices = tp.NewType('TableIndices', tp.Tuple[tp.List[int], tp.List[int]])
+TableIndices = tp.NewType('TableIndices', tp.Tuple[tp.Sequence[int], tp.Sequence[int]])
+"""Tuple of row and column indices for indexing an :class:`ndarray <numpy.ndarray>`
+"""
 
 TABLE_DTYPE = np.dtype([
     ('primes', int),
     ('indices', int),
     ('wells', float),
 ])
+"""A :term:`structured data type` for table results
+
+:param primes: Value from the :func:`prime root sequence <.math.prime_root_seq>`
+:param indices: The index of the *primes* value within the sequence
+:param wells: The physical well height calculated from *primes* and the
+    design wavelength
+"""
+
+TableArray = tp.NewType('TableArray', npt.NDArray[TABLE_DTYPE])
+"""A structured array of type :data:`TABLE_DTYPE`
+"""
 
 def kth_diag_indices(
     ncols: int, nrows: int, k: int
@@ -23,17 +36,14 @@ def kth_diag_indices(
     This is similar to :func:`numpy.diagonal` and :func:`numpy.diag_indices`,
     but supports arrays with non-uniform shapes (where ``ncols != nrows``).
 
-    The results may be used to directly index an array of shape(nrows, ncols).
+    The results may be used to directly index an array of shape ``(nrows, ncols)``.
 
     Arguments:
-        ncols: Number of columns in the array (shape[0])
-        nrows: Number of rows in the array (shape[1])
+        ncols: Number of columns in the array (``shape[0]``)
+        nrows: Number of rows in the array (``shape[1]``)
         k: The diagonal to calculate where k=0 is the main diagonal, k>0 for
             diagonals above the main, and k<0 for diagonals below the main
 
-    Returns:
-        rows: The row indices of the diagonal
-        cols: The column indices of the diagonal
     """
 
     shape = (nrows, ncols)
@@ -52,13 +62,13 @@ def kth_diag_indices(
 
 def iter_diags(ncols: int, nrows: int) -> tp.Iterable[TableIndices]:
     """Iterate over the indices for all diagonals
-    of an array of shape(nrows, ncols)
+    of an array of shape ``(nrows, ncols)``
 
     Uses :func:`kth_diag_indices` to generate the indices
 
     Arguments:
-        ncols: Number of columns in the array (shape[0])
-        nrows: Number of rows in the array (shape[1])
+        ncols: Number of columns in the array (``shape[0]``)
+        nrows: Number of rows in the array (``shape[1]``)
 
     """
     pos_ks = list(range(max([ncols, nrows])))
@@ -94,7 +104,7 @@ def check_arguments(
 
 def prime_root_table(
     prime_num: int, prime_root: int, ncols: int, nrows: int
-) -> npt.NDArray[TABLE_DTYPE]:
+) -> TableArray:
     """Calculate well indices and prime elements
 
     Arguments:
@@ -137,7 +147,7 @@ def well_width(design_freq: int) -> float:
 def well_height_table(
     prime_num: int, prime_root: int, ncols: int, nrows: int,
     design_freq: int, sos: tp.Optional[Number] = None
-) -> npt.NDArray[TABLE_DTYPE]:
+) -> TableArray:
     """Calculate the well heights in centimeters for the given arguments
 
     Arguments:

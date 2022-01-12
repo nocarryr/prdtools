@@ -23,6 +23,12 @@ def wavelength_meters(freq: int, sos: tp.Optional[Number] = None) -> Number:
     return sos / freq
 
 def wavelength_cm(freq: int, sos: tp.Optional[Number] = None) -> Number:
+    """Calculate the wavelength of the given frequency in centimeters
+
+    Arguments:
+        freq: The frequency in Hz
+        sos: Speed of sound in meters per second. Defaults to 343
+    """
     return wavelength_meters(freq, sos) * 100
 
 def prim_roots(modulo: int) -> tp.List[int]:
@@ -87,12 +93,16 @@ def prime_root_seq(
 
     .. math::
 
-        S_h = g ^ h \mod N
+        S_h = g ^ h \bmod{N}
 
-    where
+    where :math:`N` = *prime_num*, :math:`g` = *prime_root* and :math:`h` is
+    the sequence index (starting with 1). The sequence continues until
+    the first repetition of :math:`S_h`.
 
-    ``N`` = *prime_num*, ``g`` = *prime_root* and ``h`` is the sequence index
-    (starting with 1)
+    Arguments:
+        prime_num: Prime number for the sequence
+        prime_root: A primitive root of the *prime_num*. If not given, an
+            attempt will be made to find the first primitive root
 
     """
     if prime_root is None:
