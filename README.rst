@@ -22,6 +22,8 @@ Links
 
     * - Project Home
       - https://github.com/nocarryr/prdtools
+    * - Documentation
+      - https://prdtools.readthedocs.io
 
 
 License
