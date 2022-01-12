@@ -1,5 +1,6 @@
 import argparse
 import typing as tp
+from numbers import Number
 
 import numpy as np
 import numpy.typing as npt
@@ -134,7 +135,8 @@ def well_width(design_freq: int) -> float:
     return wavelength_meters(design_freq) / 2 * 100
 
 def well_height_table(
-    prime_num: int, prime_root: int, ncols: int, nrows: int, design_freq: int
+    prime_num: int, prime_root: int, ncols: int, nrows: int,
+    design_freq: int, sos: tp.Optional[Number] = None
 ) -> npt.NDArray[TABLE_DTYPE]:
     """Calculate the well heights in centimeters for the given arguments
 
@@ -144,13 +146,14 @@ def well_height_table(
         ncols: Number of columns in the table
         nrows: Number of rows in the table
         design_freq: The lowest frequency (in Hz) the diffusor is designed for
+        sos: Speed of sound in meters per second. Defaults to 343
 
     *ncols* and *nrows* must be coprime factors of *prime_num*
 
     The returned array will be of shape ``(nrows, ncols)``
     """
     result = prime_root_table(prime_num, prime_root, ncols, nrows)
-    w = wavelength_cm(design_freq)
+    w = wavelength_cm(design_freq, sos)
     result['wells'] = result['primes'] * w / (prime_num*2)
     return result
 
@@ -161,6 +164,10 @@ def main():
     p.add_argument('-p', '--prime', dest='prime_num', type=int)
     p.add_argument('-r', '--root', dest='prime_root', type=int)
     p.add_argument('-f', '--freq', dest='design_freq', type=int, required=True)
+    p.add_argument('-s', '--sos',
+        dest='sos', type=int,
+        help='Speed of sound (in meters per second)', default=SPEED_OF_SOUND,
+    )
 
     args = p.parse_args()
     if args.prime_num is None:
