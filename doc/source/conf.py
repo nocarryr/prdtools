@@ -40,6 +40,7 @@ extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.viewcode',
     'sphinx.ext.intersphinx',
+    'sphinx.ext.extlinks',
 ]
 
 autodoc_member_order = 'bysource'
@@ -52,6 +53,11 @@ autodoc_typehints_description_target = 'documented'
 intersphinx_mapping = {
     'python':('https://docs.python.org/', None),
     'numpy': ('https://numpy.org/doc/stable/', None),
+}
+
+extlinks = {
+    'duref': ('https://docutils.sourceforge.io/docs/ref/rst/'
+              'restructuredtext.html#%s', ''),
 }
 
 # Add any paths that contain templates here, relative to this directory.

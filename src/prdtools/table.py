@@ -1,4 +1,6 @@
+import os
 import argparse
+from dataclasses import dataclass
 import typing as tp
 from numbers import Number
 
@@ -6,6 +8,12 @@ import numpy as np
 import numpy.typing as npt
 
 from .math import *
+
+__all__ = (
+    'TableParameters', 'TableResult', 'well_height_table', 'prime_root_table',
+    'well_width', 'iter_diags', 'kth_diag_indices',
+    'TableArray', 'TABLE_DTYPE', 'TableIndices',
+)
 
 TableIndices = tp.NewType('TableIndices', tp.Tuple[tp.Sequence[int], tp.Sequence[int]])
 """Tuple of row and column indices for indexing an :class:`ndarray <numpy.ndarray>`
@@ -92,41 +100,22 @@ def iter_diags(ncols: int, nrows: int) -> tp.Iterable[TableIndices]:
         assert k in all_ks
 
 
-def check_arguments(
-    prime_num: int, prime_root: int, ncols: int, nrows: int
-) -> None:
-
-    assert is_prime(prime_num), f'{prime_num} is not a prime number'
-    assert is_prime(prime_root), f'{prime_root} is not a prime number'
-    num_wells = ncols * nrows
-    assert num_wells == prime_num - 1, f'ncols * nrows must equal prime_num-1'
-    assert is_coprime(ncols, nrows), f'ncols and nrows must be coprime'
-
-def prime_root_table(
-    prime_num: int, prime_root: int, ncols: int, nrows: int
-) -> TableArray:
-    """Calculate well indices and prime elements
-
-    Arguments:
-        prime_num: The basis prime number where ``prime_num - 1 == ncols * nrows``
-        prime_root: A primitive root of *prime_num* used to calculate the sequence
-        ncols: Number of columns in the table
-        nrows: Number of rows in the table
-
-    *ncols* and *nrows* must be coprime factors of *prime_num*
+def prime_root_table(parameters: 'TableParameters') -> TableArray:
+    """Calculate well indices and prime elements for the given
+    :class:`TableParameters`
 
     The returned array will be of shape ``(nrows, ncols)``
     """
-    check_arguments(prime_num, prime_root, ncols, nrows)
-    root_sequence = list(prime_root_seq(prime_num, prime_root))
-    print(f'{root_sequence=}')
-    result = np.zeros((nrows, ncols), dtype=TABLE_DTYPE)
+    p = parameters
+    p.validate()
+    root_sequence = list(prime_root_seq(p.prime_num, p.prime_root))
+    result = np.zeros((p.nrows, p.ncols), dtype=TABLE_DTYPE)
     def iter_roots():
         while True:
             yield from root_sequence
 
     root_iter = iter_roots()
-    diag_iter = iter_diags(ncols, nrows)
+    diag_iter = iter_diags(p.ncols, p.nrows)
 
     count = 0
     while count < result.size:
@@ -136,36 +125,181 @@ def prime_root_table(
         result['primes'][diag_ix] = values
         result['indices'][diag_ix] = np.arange(count, count+diag_count)
         count += diag_count
-        # print(f'{count=}')
     return result
 
-def well_width(design_freq: int) -> float:
+def well_width(
+    design_freq: int, speed_of_sound: tp.Optional[Number] = SPEED_OF_SOUND
+) -> float:
     """Calculate the well width for the given design frequency (in centimeters)
     """
-    return wavelength_meters(design_freq) / 2 * 100
+    return wavelength_cm(design_freq) / 2
 
-def well_height_table(
-    prime_num: int, prime_root: int, ncols: int, nrows: int,
-    design_freq: int, sos: tp.Optional[Number] = None
-) -> TableArray:
-    """Calculate the well heights in centimeters for the given arguments
-
-    Arguments:
-        prime_num: The basis prime number where ``prime_num - 1 == ncols * nrows``
-        prime_root: A primitive root of *prime_num* used to calculate the sequence
-        ncols: Number of columns in the table
-        nrows: Number of rows in the table
-        design_freq: The lowest frequency (in Hz) the diffusor is designed for
-        sos: Speed of sound in meters per second. Defaults to 343
-
-    *ncols* and *nrows* must be coprime factors of *prime_num*
+def well_height_table(parameters: 'TableParameters') -> TableArray:
+    """Calculate the well heights in centimeters for the given
+    :class:`TableParameters`
 
     The returned array will be of shape ``(nrows, ncols)``
     """
-    result = prime_root_table(prime_num, prime_root, ncols, nrows)
-    w = wavelength_cm(design_freq, sos)
-    result['wells'] = result['primes'] * w / (prime_num*2)
+    p = parameters
+    result = prime_root_table(p)
+    w = wavelength_cm(p.design_freq, p.speed_of_sound)
+    result['wells'] = result['primes'] * w / (p.prime_num*2)
     return result
+
+
+@dataclass
+class TableParameters:
+    """Parameters used to calculate a :class:`TableResult`
+
+    :attr:`ncols` and :attr:`nrows` must be coprime factors of :attr:`prime_num`
+    """
+
+    #: Number of table columns
+    ncols: int
+
+    #: Number of table rows
+    nrows: int
+
+    #: The basis prime number where ``prime_num - 1 == ncols * nrows``
+    prime_num: int
+
+    #: A primitive root of :attr:`prime_num` used to calculate the sequence
+    prime_root: int
+
+    #: The lowest frequency (in Hz) the diffusor is designed for
+    design_freq: int
+
+    #: Speed of sound in meters per second
+    speed_of_sound: tp.Optional[int] = SPEED_OF_SOUND
+
+    @property
+    def well_width(self) -> float:
+        """The width (in centimeters) of each well based on the
+        :attr:`design_freq` and :attr:`speed_of_sound`
+        """
+        return well_width(self.design_freq, self.speed_of_sound)
+
+    @property
+    def total_width(self) -> float:
+        """The total width of the diffusor in centimeters
+        """
+        return self.well_width * self.ncols
+
+    @property
+    def total_height(self) -> float:
+        """The total height of the diffusor in centimeters
+        """
+        return self.well_width * self.nrows
+
+    def validate(self) -> None:
+        """Validate the parameters
+        """
+        assert is_prime(self.prime_num), f'{self.prime_num} is not a prime number'
+        assert is_prime(self.prime_root), f'{self.prime_root} is not a prime number'
+        num_wells = self.ncols * self.nrows
+        assert num_wells == self.prime_num - 1, f'ncols * nrows must equal prime_num-1'
+        assert is_coprime(self.ncols, self.nrows), f'ncols and nrows must be coprime'
+
+    def calculate(self) -> 'TableResult':
+        """Calculate the :func:`well height table <well_height_table>` and
+        return it as a :class:`TableResult`
+        """
+        data = well_height_table(self)
+        return TableResult(self, data)
+
+
+class TableResult:
+    """A calculated table result
+    """
+
+    #: The :class:`TableParameters` used to generate the result
+    parameters: TableParameters
+
+    #: The result array calculated by :func:`well_height_table`
+    data: TableArray
+
+    #: The well heights in :attr:`data` rounded to the nearest centimeter
+    well_heights: npt.NDArray[int]
+
+    def __init__(self, parameters: TableParameters, data: TableArray):
+        self.parameters = parameters
+        self.data = data
+        self.well_heights = np.asarray(np.rint(data['wells']), dtype=int)
+        self._line_width = None
+
+    @classmethod
+    def from_parameters(cls, parameters: TableParameters) -> 'TableResult':
+        """Calculate the result from the given :class:`TableParameters`
+        """
+        return parameters.calculate()
+
+    @classmethod
+    def from_kwargs(cls, **kwargs) -> 'TableResult':
+        """Calculate the result using parameter values as keyword arguments
+
+        The keyword arguments given must include all necessary values to create
+        a :class:`TableParameters` instance
+        """
+        parameters = TableParameters(**kwargs)
+        return cls.from_parameters(parameters)
+
+    def get_well_counts(self) -> tp.Dict[int, int]:
+        """Count the total number of each unique well height in
+        :attr:`well_heights`
+
+        Returns the result as a dict of ``{well_height: count}``
+        """
+        heights = self.well_heights
+        bins = np.unique(heights)
+        bins.sort()
+        counts = [heights[heights==h].size for h in bins]
+        return {h:c for h,c in zip(bins, counts)}
+
+    def _calc_line_width(self) -> int:
+        line_width = self._line_width
+        if line_width is not None:
+            return line_width
+        line_width = np.get_printoptions()['linewidth']
+        heights = self.well_heights
+        s = np.array2string(heights, separator=',', max_line_width=line_width)
+        lines = s.splitlines()
+        if not lines[0].endswith('],'):
+            line_width += len(lines[1])
+            s = np.array2string(heights, separator=',', max_line_width=line_width)
+        self._line_width = line_width
+        return line_width
+
+    def to_csv(self, separator=',') -> str:
+        """Format the :attr:`well_heights` array as a multiline string of
+        comma-separated values
+        """
+        heights = self.well_heights
+        line_width = self._calc_line_width()
+        lines = []
+        for i in range(heights.shape[0]):
+            row = heights[i]
+            s = np.array2string(row, separator=separator, max_line_width=line_width)
+            s = s.lstrip('[').rstrip(']')
+            lines.append(s)
+        return os.linesep.join(lines)
+
+    def to_rst(self) -> str:
+        """Format the :attr:`well_heights` array as an :duref:`rST table <grid-tables>`
+        """
+        nrows, ncols = self.parameters.nrows, self.parameters.ncols
+        value_lines = self.to_csv().splitlines()
+        cell_width = value_lines[0].index(',') + 1
+        row_sep = '-' * cell_width
+        row_sep = f'+{row_sep}' * ncols
+        row_sep = f'{row_sep}+'
+        lines = [row_sep]
+        for line in value_lines:
+            line = ' |'.join(line.split(','))
+            line = f'|{line} |'
+            lines.append(line)
+            lines.append(row_sep)
+        return os.linesep.join(lines)
+
 
 def main():
     p = argparse.ArgumentParser()
@@ -175,7 +309,7 @@ def main():
     p.add_argument('-r', '--root', dest='prime_root', type=int)
     p.add_argument('-f', '--freq', dest='design_freq', type=int, required=True)
     p.add_argument('-s', '--sos',
-        dest='sos', type=int,
+        dest='speed_of_sound', type=int,
         help='Speed of sound (in meters per second)', default=SPEED_OF_SOUND,
     )
 
@@ -186,15 +320,11 @@ def main():
         assert is_prime(args.prime_num)
     if args.prime_root is None:
         args.prime_root = min(prim_roots(args.prime_num))
-    result = well_height_table(**vars(args))
-    wells = np.asarray(np.rint(result['wells']), dtype=int)
-    line_width = np.get_printoptions()['linewidth']
-    s = np.array2string(wells, separator=',', max_line_width=line_width)
-    lines = s.splitlines()
-    if not lines[0].endswith('],'):
-        line_width += len(lines[1])
-        s = np.array2string(wells, separator=',', max_line_width=line_width)
-    print(s)
+    result = TableResult.from_kwargs(**vars(args))
+    print(result.to_rst())
+    print('')
+    print('Well Counts:')
+    print(result.get_well_counts())
     return result
 
 if __name__ == '__main__':
