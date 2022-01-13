@@ -187,8 +187,14 @@ def main():
     if args.prime_root is None:
         args.prime_root = min(prim_roots(args.prime_num))
     result = well_height_table(**vars(args))
-    wells = np.rint(result['wells'])
-    print(np.asarray(wells, dtype=int))
+    wells = np.asarray(np.rint(result['wells']), dtype=int)
+    line_width = np.get_printoptions()['linewidth']
+    s = np.array2string(wells, separator=',', max_line_width=line_width)
+    lines = s.splitlines()
+    if not lines[0].endswith('],'):
+        line_width += len(lines[1])
+        s = np.array2string(wells, separator=',', max_line_width=line_width)
+    print(s)
     return result
 
 if __name__ == '__main__':
