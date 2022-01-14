@@ -75,9 +75,10 @@ def congruence_classes(n: int) -> tp.List[int]:
     return results
 
 def is_prime(n: int) -> bool:
-    """Return True if *n* is a positive prime number
+    """Return True if *n* is a prime number
     """
-    if n <= 0:
+    n = abs(n)
+    if n == 0:
         return False
     elif n <= 3:
         return True
