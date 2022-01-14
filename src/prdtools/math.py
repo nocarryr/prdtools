@@ -97,6 +97,8 @@ def is_coprime(a: int, b: int) -> bool:
 def iter_divisors(total_size: int) -> tp.Iterable[tp.Tuple[int, int]]:
     """Iterate over all possible numerator/denominator pairs of the given number
     """
+    if total_size == 4:
+        yield 2, 2
     seen = set()
     for i in range(2, total_size // 2):
         if i in seen:
