@@ -61,7 +61,7 @@ def frequency_cm(
     return frequency_meters(wavelength / 100, sos)
 
 def prim_roots(modulo: int) -> tp.List[int]:
-    """Calculate all primitive roots for the given modulo
+    """Calculate all :term:`primitive roots <primitive root>` for the given modulo
     """
     required_set = {num for num in range(1, modulo) if gcd(num, modulo) }
     return [g for g in range(1, modulo) if required_set == {pow(g, powers, modulo)
@@ -89,7 +89,7 @@ def is_prime(n: int) -> bool:
     return True
 
 def is_coprime(a: int, b: int) -> bool:
-    """Return True if a and b are coprime
+    """Return True if a and b are :term:`coprime`
     """
     return gcd(a, b) == 1
 
@@ -108,7 +108,7 @@ def iter_divisors(total_size: int) -> tp.Iterable[tp.Tuple[int, int]]:
             seen |= set([i, int(v)])
 
 def iter_coprimes(total_size: int) -> tp.Iterable[tp.Tuple[int, int]]:
-    """Iterate over all coprime pairs for the given number
+    """Iterate over all :term:`coprime` pairs for the given number
     """
     for i, v in iter_divisors(total_size):
         if is_coprime(i, v):
@@ -130,7 +130,7 @@ def prime_root_seq(
 
     Arguments:
         prime_num: Prime number for the sequence
-        prime_root: A primitive root of the *prime_num*. If not given, an
+        prime_root: A :term:`primitive root` of the *prime_num*. If not given, an
             attempt will be made to find the first primitive root
 
     """

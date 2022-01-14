@@ -168,7 +168,7 @@ class TableParameters:
     #: The basis prime number where ``prime_num - 1 == ncols * nrows``
     prime_num: int
 
-    #: A primitive root of :attr:`prime_num` used to calculate the sequence
+    #: A :term:`primitive root` of :attr:`prime_num` used to calculate the sequence
     prime_root: int
 
     #: The lowest frequency (in Hz) the diffusor is designed for
