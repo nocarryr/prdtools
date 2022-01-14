@@ -9,7 +9,7 @@ __all__ = (
 )
 
 SPEED_OF_SOUND: Number = 343
-"""Speed of sound in meters per second
+"""Speed of sound in meters per second at 20°C (68°F)
 """
 
 def wavelength_meters(
