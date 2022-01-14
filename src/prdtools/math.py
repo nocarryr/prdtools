@@ -3,7 +3,8 @@ import typing as tp
 from numbers import Number
 
 __all__ = (
-    'SPEED_OF_SOUND', 'wavelength_meters', 'wavelength_cm', 'prim_roots',
+    'SPEED_OF_SOUND', 'wavelength_meters', 'wavelength_cm',
+    'frequency_meters', 'frequency_cm', 'prim_roots',
     'is_prime', 'is_coprime', 'iter_divisors', 'iter_coprimes', 'prime_root_seq',
 )
 
@@ -30,6 +31,28 @@ def wavelength_cm(freq: int, sos: tp.Optional[Number] = None) -> Number:
         sos: Speed of sound in meters per second. Defaults to 343
     """
     return wavelength_meters(freq, sos) * 100
+
+def frequency_meters(
+    wavelength: Number, sos: tp.Optional[Number] = None
+) -> Number:
+    """Calculate the frequency of the given wavelength in meters
+
+    Arguments:
+        wavelength: The wavelength in meters
+        sos: Speed of sound in meters per second.  Defaults to 343
+    """
+    if sos is None:
+        sos = SPEED_OF_SOUND
+    return sos / wavelength
+
+def frequency_cm(wavelength: Number, sos: tp.Optional[Number] = None) -> Number:
+    """Calculate the frequency of the given wavelength in centimeters
+
+    Arguments:
+        wavelength: The wavelength in centimeters
+        sos: Speed of sound in meters per second.  Defaults to 343
+    """
+    return frequency_meters(wavelength / 100, sos)
 
 def prim_roots(modulo: int) -> tp.List[int]:
     """Calculate all primitive roots for the given modulo

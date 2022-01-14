@@ -127,12 +127,17 @@ def prime_root_table(parameters: 'TableParameters') -> TableArray:
         count += diag_count
     return result
 
-def well_width(
-    design_freq: int, speed_of_sound: tp.Optional[Number] = SPEED_OF_SOUND
-) -> float:
-    """Calculate the well width for the given design frequency (in centimeters)
+def calc_hi_frequency(
+    well_width: Number, speed_of_sound: tp.Optional[Number] = SPEED_OF_SOUND
+) -> int:
+    """Calculate the highest diffusion frequency for the given well width
+
+    Arguments:
+        well_width: The well width in centimeters
+        speed_of_sound: Speed of sound in meters per second. Defaults to 343
     """
-    return wavelength_cm(design_freq) / 2
+    hf = frequency_cm(well_width * 2, speed_of_sound)
+    return round(hf)
 
 def well_height_table(parameters: 'TableParameters') -> TableArray:
     """Calculate the well heights in centimeters for the given
@@ -169,15 +174,18 @@ class TableParameters:
     #: The lowest frequency (in Hz) the diffusor is designed for
     design_freq: int
 
+    #: The width of each well in centimeters
+    well_width: tp.Optional[float] = 3.81
+
     #: Speed of sound in meters per second
     speed_of_sound: tp.Optional[int] = SPEED_OF_SOUND
 
     @property
-    def well_width(self) -> float:
-        """The width (in centimeters) of each well based on the
-        :attr:`design_freq` and :attr:`speed_of_sound`
+    def high_frequency(self) -> int:
+        """The highest diffusion frequency possible with the specified
+        :attr:`well_width` and :attr:`speed_of_sound`
         """
-        return well_width(self.design_freq, self.speed_of_sound)
+        return calc_hi_frequency(self.well_width, self.speed_of_sound)
 
     @property
     def total_width(self) -> float:
@@ -308,6 +316,9 @@ def main():
     p.add_argument('-p', '--prime', dest='prime_num', type=int)
     p.add_argument('-r', '--root', dest='prime_root', type=int)
     p.add_argument('-f', '--freq', dest='design_freq', type=int, required=True)
+    p.add_argument('-w', '--well-width',
+        dest='well_width', type=float, default=3.81,
+    )
     p.add_argument('-s', '--sos',
         dest='speed_of_sound', type=int,
         help='Speed of sound (in meters per second)', default=SPEED_OF_SOUND,
