@@ -12,45 +12,51 @@ SPEED_OF_SOUND: Number = 343
 """Speed of sound in meters per second
 """
 
-def wavelength_meters(freq: int, sos: tp.Optional[Number] = None) -> Number:
+def wavelength_meters(
+    freq: int, sos: tp.Optional[Number] = SPEED_OF_SOUND
+) -> Number:
     """Calculate the wavelength of the given frequency in meters
 
     Arguments:
         freq: The frequency in Hz
-        sos: Speed of sound in meters per second. Defaults to 343
+        sos: Speed of sound in meters per second
     """
     if sos is None:
         sos = SPEED_OF_SOUND
     return sos / freq
 
-def wavelength_cm(freq: int, sos: tp.Optional[Number] = None) -> Number:
+def wavelength_cm(
+    freq: int, sos: tp.Optional[Number] = SPEED_OF_SOUND
+) -> Number:
     """Calculate the wavelength of the given frequency in centimeters
 
     Arguments:
         freq: The frequency in Hz
-        sos: Speed of sound in meters per second. Defaults to 343
+        sos: Speed of sound in meters per second
     """
     return wavelength_meters(freq, sos) * 100
 
 def frequency_meters(
-    wavelength: Number, sos: tp.Optional[Number] = None
+    wavelength: Number, sos: tp.Optional[Number] = SPEED_OF_SOUND
 ) -> Number:
     """Calculate the frequency of the given wavelength in meters
 
     Arguments:
         wavelength: The wavelength in meters
-        sos: Speed of sound in meters per second.  Defaults to 343
+        sos: Speed of sound in meters per second
     """
     if sos is None:
         sos = SPEED_OF_SOUND
     return sos / wavelength
 
-def frequency_cm(wavelength: Number, sos: tp.Optional[Number] = None) -> Number:
+def frequency_cm(
+    wavelength: Number, sos: tp.Optional[Number] = SPEED_OF_SOUND
+) -> Number:
     """Calculate the frequency of the given wavelength in centimeters
 
     Arguments:
         wavelength: The wavelength in centimeters
-        sos: Speed of sound in meters per second.  Defaults to 343
+        sos: Speed of sound in meters per second
     """
     return frequency_meters(wavelength / 100, sos)
 

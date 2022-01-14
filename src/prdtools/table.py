@@ -134,7 +134,7 @@ def calc_hi_frequency(
 
     Arguments:
         well_width: The well width in centimeters
-        speed_of_sound: Speed of sound in meters per second. Defaults to 343
+        speed_of_sound: Speed of sound in meters per second
     """
     hf = frequency_cm(well_width * 2, speed_of_sound)
     return round(hf)
