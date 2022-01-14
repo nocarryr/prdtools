@@ -325,6 +325,9 @@ def main():
         dest='speed_of_sound', type=int,
         help='Speed of sound (in meters per second)', default=SPEED_OF_SOUND,
     )
+    p.add_argument(
+        '--format', dest='format', choices=('csv', 'rst'), default='csv',
+    )
 
     args = p.parse_args()
     if args.prime_num is None:
@@ -333,8 +336,15 @@ def main():
         assert is_prime(args.prime_num)
     if args.prime_root is None:
         args.prime_root = min(prim_roots(args.prime_num))
-    result = TableResult.from_kwargs(**vars(args))
-    print(result.to_rst())
+    out_fmt = args.format
+    kwargs = vars(args)
+    del kwargs['format']
+    result = TableResult.from_kwargs(**kwargs)
+
+    if out_fmt == 'csv':
+        print(result.to_csv())
+    else:
+        print(result.to_rst())
     print('')
     print('Well Counts:')
     counts = result.get_well_counts()
