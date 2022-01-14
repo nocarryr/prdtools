@@ -3,6 +3,7 @@ import argparse
 from dataclasses import dataclass
 import typing as tp
 from numbers import Number
+import locale
 
 import numpy as np
 import numpy.typing as npt
@@ -310,6 +311,7 @@ class TableResult:
 
 
 def main():
+    locale.setlocale(locale.LC_NUMERIC, '')
     p = argparse.ArgumentParser()
     p.add_argument('ncols', type=int)
     p.add_argument('nrows', type=int)
@@ -335,7 +337,15 @@ def main():
     print(result.to_rst())
     print('')
     print('Well Counts:')
-    print(result.get_well_counts())
+    counts = result.get_well_counts()
+    print(os.linesep.join([f'{k:2d}cm: {v:2d}' for k,v in counts.items()]))
+    print('')
+    total_length = result.well_heights.sum()
+    print(f'Total well length: {total_length:n}cm')
+    p = result.parameters
+    print(f'Highest frequency: {p.high_frequency:n} Hz')
+    print(f'Total size: {p.total_width:.3f}cm x {p.total_height}cm')
+    print('')
     return result
 
 if __name__ == '__main__':
