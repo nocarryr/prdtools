@@ -106,9 +106,10 @@ def iter_divisors(total_size: int) -> tp.Iterable[tp.Tuple[int, int]]:
         v = total_size / i
         if v in seen:
             continue
-        if v == int(v):
-            yield i, v
-            seen |= set([i, int(v)])
+        intv = int(v)
+        if v == intv:
+            yield i, intv
+            seen |= set([i, intv])
 
 def iter_coprimes(total_size: int) -> tp.Iterable[tp.Tuple[int, int]]:
     """Iterate over all :term:`coprime` pairs for the given number
