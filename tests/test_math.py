@@ -1,12 +1,11 @@
 from math import gcd
 from prdtools import math
 
-def test_is_prime(prime_generator):
-    primes = set()
-    for p in prime_generator(100):
+def test_is_prime(prime_numbers):
+    primes = set(prime_numbers)
+    for p in prime_numbers:
         assert math.is_prime(p)
         assert math.is_prime(-p)
-        primes.add(p)
     print(f'{max(primes)=}')
     all_n = set(range(max(primes)))
     non_primes = all_n - primes

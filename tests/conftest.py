@@ -1,26 +1,20 @@
+from pathlib import Path
 import pytest
 
-PRIME_NUMBERS = [1]
+BASE_DIR = Path(__file__).parent.resolve()
+DATA_DIR = BASE_DIR / 'data'
 
-def next_prime(p):
-    x = p + 1
-    while True:
-        if all(x % i != 0 for i in range(2, int(x**.5)+1)):
-            return x
-        x += 1
+PRIME_NUMBERS = None
+
+def get_primes():
+    global PRIME_NUMBERS
+    if PRIME_NUMBERS is not None:
+        return PRIME_NUMBERS
+    p = DATA_DIR / 'prime-numbers.txt'
+    s = p.read_text()
+    PRIME_NUMBERS = [int(line) for line in s.splitlines()]
+    return PRIME_NUMBERS
 
 @pytest.fixture
-def prime_generator():
-    def generate(n):
-        if n < len(PRIME_NUMBERS):
-            yield from PRIME_NUMBERS[:n+1]
-        else:
-            yield from PRIME_NUMBERS
-            p = PRIME_NUMBERS[-1]
-            i = len(PRIME_NUMBERS)
-            while i < n:
-                p = next_prime(p)
-                PRIME_NUMBERS.append(p)
-                yield p
-                i += 1
-    return generate
+def prime_numbers():
+    return get_primes()
