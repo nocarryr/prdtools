@@ -80,16 +80,21 @@ def iter_diags(ncols: int, nrows: int) -> tp.Iterable[TableIndices]:
         nrows: Number of rows in the array (``shape[1]``)
 
     """
+    size = ncols * nrows
     pos_ks = list(range(max([ncols, nrows])))
     neg_ks = [-v for v in pos_ks if v != 0]
     all_ks = set(pos_ks) | set(neg_ks)
 
     k = 0
     next_row = 1
-    while True:
+    count = 0
+    while count < size:
         all_ks.discard(k)
         ix = kth_diag_indices(ncols, nrows, k)
         yield ix
+        count += len(ix[0])
+        if count >= size - 1:
+            break
         if not len(all_ks):
             break
         next_col = ix[1][-1] + 1
