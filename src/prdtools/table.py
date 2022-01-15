@@ -12,13 +12,9 @@ from .math import *
 
 __all__ = (
     'TableParameters', 'TableResult', 'well_height_table', 'prime_root_table',
-    'well_width', 'iter_diags', 'diag_indices_flat', 'kth_diag_indices',
-    'TableArray', 'TABLE_DTYPE', 'TableIndices',
+    'well_width', 'build_diag_indices', 'TableArray', 'TABLE_DTYPE',
 )
 
-TableIndices = tp.NewType('TableIndices', tp.Tuple[tp.Sequence[int], tp.Sequence[int]])
-"""Tuple of row and column indices for indexing an :class:`ndarray <numpy.ndarray>`
-"""
 
 TABLE_DTYPE = np.dtype([
     ('primes', int),
@@ -37,90 +33,22 @@ TableArray = tp.NewType('TableArray', npt.NDArray[TABLE_DTYPE])
 """A structured array of type :data:`TABLE_DTYPE`
 """
 
-def kth_diag_indices(
-    nrows: int, ncols: int, k: int
-) -> TableIndices:
-    """Calculate the indices representing a diagonal of a 2-d array
+def build_diag_indices(
+    nrows: int, ncols: int
+) -> tp.Tuple[npt.NDArray[int], npt.NDArray[int]]:
+    """Create indices for all diagonals of a 2-d array of shape ``(nrows, ncols)``
 
-    This is similar to :func:`numpy.diagonal` and :func:`numpy.diag_indices`,
-    but supports arrays with non-uniform shapes (where ``ncols != nrows``).
-
-    The results may be used to directly index an array of shape ``(nrows, ncols)``.
+    The results may be used to directly index an array of shape
+    ``(nrows, ncols)`` along the diagonals.
 
     Arguments:
         nrows: Number of rows in the array (``shape[0]``)
         ncols: Number of columns in the array (``shape[1]``)
-        k: The diagonal to calculate where k=0 is the main diagonal, k>0 for
-            diagonals above the main, and k<0 for diagonals below the main
-
     """
-
-    shape = (nrows, ncols)
-    max_len, min_len = max(shape), min(shape)
-
-    if k >= 0:
-        start_row, start_col = 0, k
-    else:
-        start_row, start_col = -k, 0
-
-    l = list(zip(range(start_row, nrows), range(start_col, ncols)))
-
-    rows = [v[0] for v in l]
-    cols = [v[1] for v in l]
+    size = nrows * ncols
+    rows = np.resize(np.arange(nrows), size)
+    cols = np.resize(np.arange(ncols), size)
     return rows, cols
-
-def iter_diags(nrows: int, ncols: int) -> tp.Iterable[TableIndices]:
-    """Iterate over the indices for all diagonals
-    of an array of shape ``(nrows, ncols)``
-
-    Uses :func:`kth_diag_indices` to generate the indices
-
-    Arguments:
-        nrows: Number of rows in the array (``shape[0]``)
-        ncols: Number of columns in the array (``shape[1]``)
-
-    """
-    size = ncols * nrows
-    pos_ks = list(range(max([ncols, nrows])))
-    neg_ks = [-v for v in pos_ks if v != 0]
-    all_ks = set(pos_ks) | set(neg_ks)
-
-    k = 0
-    next_row = 1
-    count = 0
-    while count < size:
-        all_ks.discard(k)
-        ix = kth_diag_indices(nrows, ncols, k)
-        yield ix
-        count += len(ix[0])
-        if count >= size - 1:
-            break
-        if not len(all_ks):
-            break
-        next_col = ix[1][-1] + 1
-        if next_col >= ncols:
-            next_row = ix[0][-1] + 1
-            k = -next_row
-        else:
-            k = next_col
-        assert k in all_ks
-
-def diag_indices_flat(nrows: int, ncols: int) -> npt.NDArray[int]:
-    """Create an flat array of diagonal indices from :func:`iter_diags`
-
-    The returned array can be used for index assignment for a flat input array
-
-    Arguments:
-        nrows: Number of rows in the array (``shape[0]``)
-        ncols: Number of columns in the array (``shape[1]``)
-    """
-    diag_rows, diag_cols = [], []
-    for rows, cols in iter_diags(nrows, ncols):
-        diag_rows.extend(rows)
-        diag_cols.extend(cols)
-    n = nrows * ncols
-    a = np.arange(n).reshape(nrows, ncols)
-    return a[diag_rows, diag_cols]
 
 
 def prime_root_table(parameters: 'TableParameters') -> TableArray:
@@ -132,15 +60,15 @@ def prime_root_table(parameters: 'TableParameters') -> TableArray:
     p = parameters
     p.validate()
     root_gen = prime_root_seq(p.prime_num, p.prime_root)
-    result = np.zeros(p.nrows * p.ncols, dtype=TABLE_DTYPE)
+    result = np.zeros((p.nrows, p.ncols), dtype=TABLE_DTYPE)
 
-    diag_ix = diag_indices_flat(p.nrows, p.ncols)
+    diag_ix = build_diag_indices(p.nrows, p.ncols)
     primes = np.fromiter(root_gen, dtype=int)
     primes = np.resize(primes, result.size)
 
     result['primes'][diag_ix] = primes
     result['indices'][diag_ix] = np.arange(result.size)
-    return result.reshape(p.nrows, p.ncols)
+    return result
 
 def calc_hi_frequency(
     well_width: Number, speed_of_sound: tp.Optional[Number] = SPEED_OF_SOUND
