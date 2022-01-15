@@ -220,11 +220,23 @@ class TableResult:
         self._line_width = line_width
         return line_width
 
-    def to_csv(self, separator=',') -> str:
+    def to_csv(
+        self, separator: tp.Optional[str] = ',', offset: tp.Optional[int] = 0
+    ) -> str:
         """Format the :attr:`well_heights` array as a multiline string of
         comma-separated values
+
+        The *offset* argument will be added to the :attr:`well_heights` before
+        output. For well heights of ``0``, there would be no block attached to
+        the diffusor in that position. If (for aesthetic reasons) this is
+        undesirable, an offset of ``1`` (for example) could be applied to all
+        wells.
+
+        Arguments:
+            offset: An offset to apply to the well heights. Can be used if wells
+                of height ``0`` are undesired.
         """
-        heights = self.well_heights
+        heights = self.well_heights + offset
         line_width = self._calc_line_width()
         lines = []
         for i in range(heights.shape[0]):
@@ -234,11 +246,21 @@ class TableResult:
             lines.append(s)
         return os.linesep.join(lines)
 
-    def to_rst(self) -> str:
+    def to_rst(self, offset: tp.Optional[int] = 0) -> str:
         """Format the :attr:`well_heights` array as an :duref:`rST table <grid-tables>`
+
+        The *offset* argument will be added to the :attr:`well_heights` before
+        output. For well heights of ``0``, there would be no block attached to
+        the diffusor in that position. If (for aesthetic reasons) this is
+        undesirable, an offset of ``1`` (for example) could be applied to all
+        wells.
+
+        Arguments:
+            offset: An offset to apply to the well heights. Can be used if wells
+                of height ``0`` are undesired.
         """
         nrows, ncols = self.parameters.nrows, self.parameters.ncols
-        value_lines = self.to_csv().splitlines()
+        value_lines = self.to_csv(offset=offset).splitlines()
         cell_width = value_lines[0].index(',') + 1
         row_sep = '-' * cell_width
         row_sep = f'+{row_sep}' * ncols
@@ -268,6 +290,9 @@ def main():
         help='Speed of sound (in meters per second)', default=SPEED_OF_SOUND,
     )
     p.add_argument(
+        '--offset', dest='offset', type=int, default=0,
+    )
+    p.add_argument(
         '--format', dest='format', choices=('csv', 'rst'), default='csv',
     )
 
@@ -279,14 +304,16 @@ def main():
     if args.prime_root is None:
         args.prime_root = min(prim_roots(args.prime_num))
     out_fmt = args.format
+    offset = args.offset
     kwargs = vars(args)
     del kwargs['format']
+    del kwargs['offset']
     result = TableResult.from_kwargs(**kwargs)
 
     if out_fmt == 'csv':
-        print(result.to_csv())
+        print(result.to_csv(offset=offset))
     else:
-        print(result.to_rst())
+        print(result.to_rst(offset=offset))
     print('')
     print('Well Counts:')
     counts = result.get_well_counts()
