@@ -38,7 +38,7 @@ TableArray = tp.NewType('TableArray', npt.NDArray[TABLE_DTYPE])
 """
 
 def kth_diag_indices(
-    ncols: int, nrows: int, k: int
+    nrows: int, ncols: int, k: int
 ) -> TableIndices:
     """Calculate the indices representing a diagonal of a 2-d array
 
@@ -48,8 +48,8 @@ def kth_diag_indices(
     The results may be used to directly index an array of shape ``(nrows, ncols)``.
 
     Arguments:
-        ncols: Number of columns in the array (``shape[0]``)
-        nrows: Number of rows in the array (``shape[1]``)
+        nrows: Number of rows in the array (``shape[0]``)
+        ncols: Number of columns in the array (``shape[1]``)
         k: The diagonal to calculate where k=0 is the main diagonal, k>0 for
             diagonals above the main, and k<0 for diagonals below the main
 
@@ -69,15 +69,15 @@ def kth_diag_indices(
     cols = [v[1] for v in l]
     return rows, cols
 
-def iter_diags(ncols: int, nrows: int) -> tp.Iterable[TableIndices]:
+def iter_diags(nrows: int, ncols: int) -> tp.Iterable[TableIndices]:
     """Iterate over the indices for all diagonals
     of an array of shape ``(nrows, ncols)``
 
     Uses :func:`kth_diag_indices` to generate the indices
 
     Arguments:
-        ncols: Number of columns in the array (``shape[0]``)
-        nrows: Number of rows in the array (``shape[1]``)
+        nrows: Number of rows in the array (``shape[0]``)
+        ncols: Number of columns in the array (``shape[1]``)
 
     """
     size = ncols * nrows
@@ -90,7 +90,7 @@ def iter_diags(ncols: int, nrows: int) -> tp.Iterable[TableIndices]:
     count = 0
     while count < size:
         all_ks.discard(k)
-        ix = kth_diag_indices(ncols, nrows, k)
+        ix = kth_diag_indices(nrows, ncols, k)
         yield ix
         count += len(ix[0])
         if count >= size - 1:
@@ -105,17 +105,17 @@ def iter_diags(ncols: int, nrows: int) -> tp.Iterable[TableIndices]:
             k = next_col
         assert k in all_ks
 
-def diag_indices_flat(ncols: int, nrows: int) -> npt.NDArray[int]:
+def diag_indices_flat(nrows: int, ncols: int) -> npt.NDArray[int]:
     """Create an flat array of diagonal indices from :func:`iter_diags`
 
     The returned array can be used for index assignment for a flat input array
 
     Arguments:
-        ncols: Number of columns in the array (``shape[0]``)
-        nrows: Number of rows in the array (``shape[1]``)
+        nrows: Number of rows in the array (``shape[0]``)
+        ncols: Number of columns in the array (``shape[1]``)
     """
     diag_rows, diag_cols = [], []
-    for rows, cols in iter_diags(ncols=ncols, nrows=nrows):
+    for rows, cols in iter_diags(nrows, ncols):
         diag_rows.extend(rows)
         diag_cols.extend(cols)
     n = nrows * ncols
@@ -134,7 +134,7 @@ def prime_root_table(parameters: 'TableParameters') -> TableArray:
     root_gen = prime_root_seq(p.prime_num, p.prime_root)
     result = np.zeros(p.nrows * p.ncols, dtype=TABLE_DTYPE)
 
-    diag_ix = diag_indices_flat(ncols=p.ncols, nrows=p.nrows)
+    diag_ix = diag_indices_flat(p.nrows, p.ncols)
     primes = np.fromiter(root_gen, dtype=int)
     primes = np.resize(primes, result.size)
 
