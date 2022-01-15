@@ -12,7 +12,7 @@ from .math import *
 
 __all__ = (
     'TableParameters', 'TableResult', 'well_height_table', 'prime_root_table',
-    'well_width', 'iter_diags', 'kth_diag_indices',
+    'well_width', 'iter_diags', 'diag_indices_flat', 'kth_diag_indices',
     'TableArray', 'TABLE_DTYPE', 'TableIndices',
 )
 
@@ -100,6 +100,23 @@ def iter_diags(ncols: int, nrows: int) -> tp.Iterable[TableIndices]:
             k = next_col
         assert k in all_ks
 
+def diag_indices_flat(ncols: int, nrows: int) -> npt.NDArray[int]:
+    """Create an flat array of diagonal indices from :func:`iter_diags`
+
+    The returned array can be used for index assignment for a flat input array
+
+    Arguments:
+        ncols: Number of columns in the array (``shape[0]``)
+        nrows: Number of rows in the array (``shape[1]``)
+    """
+    diag_rows, diag_cols = [], []
+    for rows, cols in iter_diags(ncols=ncols, nrows=nrows):
+        diag_rows.extend(rows)
+        diag_cols.extend(cols)
+    n = nrows * ncols
+    a = np.arange(n).reshape(nrows, ncols)
+    return a[diag_rows, diag_cols]
+
 
 def prime_root_table(parameters: 'TableParameters') -> TableArray:
     """Calculate well indices and prime elements for the given
@@ -109,24 +126,16 @@ def prime_root_table(parameters: 'TableParameters') -> TableArray:
     """
     p = parameters
     p.validate()
-    root_sequence = list(prime_root_seq(p.prime_num, p.prime_root))
-    result = np.zeros((p.nrows, p.ncols), dtype=TABLE_DTYPE)
-    def iter_roots():
-        while True:
-            yield from root_sequence
+    root_gen = prime_root_seq(p.prime_num, p.prime_root)
+    result = np.zeros(p.nrows * p.ncols, dtype=TABLE_DTYPE)
 
-    root_iter = iter_roots()
-    diag_iter = iter_diags(p.ncols, p.nrows)
+    diag_ix = diag_indices_flat(ncols=p.ncols, nrows=p.nrows)
+    primes = np.fromiter(root_gen, dtype=int)
+    primes = np.resize(primes, result.size)
 
-    count = 0
-    while count < result.size:
-        diag_ix = next(diag_iter)
-        diag_count = len(diag_ix[0])
-        values = np.fromiter(root_iter, dtype=int, count=diag_count)
-        result['primes'][diag_ix] = values
-        result['indices'][diag_ix] = np.arange(count, count+diag_count)
-        count += diag_count
-    return result
+    result['primes'][diag_ix] = primes
+    result['indices'][diag_ix] = np.arange(result.size)
+    return result.reshape(p.nrows, p.ncols)
 
 def calc_hi_frequency(
     well_width: Number, speed_of_sound: tp.Optional[Number] = SPEED_OF_SOUND
