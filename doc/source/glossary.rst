@@ -23,3 +23,17 @@ Glossary
 
         .. seealso::
             https://en.wikipedia.org/wiki/Euler%27s_totient_function
+
+    Carmichael function
+        The Carmichael function :math:`\lambda (n)` is the smallest possible
+        integer :math:`m` satisfying
+
+        .. math::
+
+            a ^ m \equiv 1 \bmod{n} \quad \text{for } n\in \mathbb {Z} > 0
+
+        for every integer :math:`a` between 1 and :math:`n` that is :term:`coprime`
+        to :math:`n`
+
+        .. seealso::
+            https://en.wikipedia.org/wiki/Carmichael_function

@@ -5,8 +5,10 @@ from numbers import Number
 
 __all__ = (
     'SPEED_OF_SOUND', 'wavelength_meters', 'wavelength_cm',
-    'frequency_meters', 'frequency_cm', 'prim_roots', 'is_prim_root', 'totient',
-    'is_prime', 'is_coprime', 'iter_divisors', 'iter_coprimes', 'prime_root_seq',
+    'frequency_meters', 'frequency_cm', 'prim_roots', 'is_prim_root',
+    'has_prim_roots', 'num_prim_roots', 'is_prime',
+    'is_coprime', 'iter_divisors', 'iter_coprimes', 'prime_root_seq',
+    'totient', 'carmichael',
 )
 
 SPEED_OF_SOUND: Number = 343
@@ -86,6 +88,20 @@ def is_prim_root(root: int, modulo: int) -> bool:
     result_set = get_powers_modulo(root, modulo)
     return len(result_set) == phi
 
+def has_prim_roots(n: int) -> bool:
+    r"""Determine if *n* has any :term:`primitive roots <primitive root>`
+
+    True if :math:`\varphi (n) = \lambda (n)`
+    """
+    return totient(n) == carmichael(n)
+
+def num_prim_roots(n: int) -> int:
+    r"""Return the number of :term:`primitive roots <primitive root>` of *n*
+
+    Uses the equation :math:`\varphi (\varphi (n))`
+    """
+    return totient(totient(n))
+
 @lru_cache
 def totient(n: int) -> int:
     r"""Compute :term:`Euler's totient function` :math:`\varphi (n)`
@@ -95,6 +111,15 @@ def totient(n: int) -> int:
         if is_coprime(n, k):
             count += 1
     return count
+
+def carmichael(n: int) -> int:
+    r"""Compute the :term:`Carmichael function` :math:`\lambda (n)`
+    """
+    coprimes = [x for x in range(1, n) if is_coprime(x, n)]
+    k = 1
+    while not all(pow(x, k, n) == 1 for x in coprimes):
+        k += 1
+    return k
 
 def congruence_classes(n: int) -> tp.List[int]:
     results = []

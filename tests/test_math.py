@@ -46,20 +46,21 @@ def test_coprimes():
         if math.is_prime(num):
             assert not len(pairs)
 
-def phi(n):
-    count = 0
-    for k in range(1, n+1):
-        if gcd(n, k) == 1:
-            count += 1
-    return count
 
 def test_prim_roots():
     for modulo in range(2, 400):
         roots = list(math.prim_roots(modulo))
-        order = phi(modulo)
+        order = math.totient(modulo)
         power = order * modulo
         print(f'{modulo=}, {order=}, {len(roots)=}')
-
+        if math.is_prime(modulo):
+            assert len(roots) == math.num_prim_roots(modulo)
+            if len(roots):
+                assert math.has_prim_roots(modulo)
+            else:
+                assert not math.has_prim_roots(modulo)
+        else:
+            assert len(roots) == 0
         for r in roots:
             assert pow(r, power, modulo) == 1
             assert math.is_prim_root(r, modulo)
