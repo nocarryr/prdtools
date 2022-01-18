@@ -12,7 +12,7 @@ from .math import *
 
 __all__ = (
     'TableParameters', 'TableResult', 'well_height_table', 'prime_root_table',
-    'well_width', 'build_diag_indices', 'TableArray', 'TABLE_DTYPE',
+    'well_width', 'build_diag_indices', 'ValidationError', 'TableArray', 'TABLE_DTYPE',
 )
 
 
@@ -32,6 +32,34 @@ TABLE_DTYPE = np.dtype([
 TableArray = tp.NewType('TableArray', npt.NDArray[TABLE_DTYPE])
 """A structured array of type :data:`TABLE_DTYPE`
 """
+
+class ValidationError(ValueError):
+    """Raised by :class:`TableParameters` if any parameter values are invalid
+    """
+
+    #: Error message
+    msg: str
+
+    #: Tuples of ``(field_name, value)`` that caused the error
+    fields: tp.Sequence[tp.Tuple[str, tp.Any]]
+
+    #: Field name(s) that caused the error
+    field_names: tp.Tuple[str]
+
+    def __init__(self, msg, *fields):
+        self.msg = msg
+        self.fields = fields
+        self.field_names = tuple([fname for fname, fval in fields])
+
+    def __str__(self):
+        if len(self.fields) == 1:
+            fname, fval = self.fields[0]
+            return f'Value "{fval}" invalid for "{fname}": {self.msg}'
+        elif len(self.fields):
+            fields = ', '.join(self.field_names)
+            return f'Invalid values for "{fields}": {self.msg}'
+        else:
+            return self.msg
 
 def build_diag_indices(
     nrows: int, ncols: int
@@ -144,14 +172,31 @@ class TableParameters:
 
     def validate(self) -> None:
         """Validate the parameters
+
+        Raises:
+            ValidationError: If any parameters are invalid
         """
         p = self.prime_num
         r = self.prime_root
-        assert is_prime(p), f'{p} is not a prime number'
-        assert is_prim_root(r, p), f'{r} not a primitive root of {p}'
+        if not is_prime(p):
+            raise ValidationError(
+                'Not a prime number', ('prime_num', p),
+            )
+        if not is_prim_root(r, p):
+            raise ValidationError(
+                f'{r} is not a primitive root of {p}', ('prime_root', r),
+            )
         num_wells = self.ncols * self.nrows
-        assert num_wells == p - 1, f'ncols * nrows must equal prime_num-1'
-        assert is_coprime(self.ncols, self.nrows), f'ncols and nrows must be coprime'
+        if num_wells != p - 1:
+            raise ValidationError(
+                'ncols * nrows must equal prime_num-1',
+                ('ncols', self.ncols), ('nrows', self.nrows),
+            )
+        if not is_coprime(self.ncols, self.nrows):
+            raise ValidationError(
+                'ncols and nrows must be coprime',
+                ('ncols', self.ncols), ('nrows', self.nrows),
+            )
 
     def calculate(self) -> 'TableResult':
         """Calculate the :func:`well height table <well_height_table>` and
