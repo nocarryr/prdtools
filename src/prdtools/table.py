@@ -145,10 +145,12 @@ class TableParameters:
     def validate(self) -> None:
         """Validate the parameters
         """
-        assert is_prime(self.prime_num), f'{self.prime_num} is not a prime number'
-        assert is_prime(self.prime_root), f'{self.prime_root} is not a prime number'
+        p = self.prime_num
+        r = self.prime_root
+        assert is_prime(p), f'{p} is not a prime number'
+        assert is_prim_root(r, p), f'{r} not a primitive root of {p}'
         num_wells = self.ncols * self.nrows
-        assert num_wells == self.prime_num - 1, f'ncols * nrows must equal prime_num-1'
+        assert num_wells == p - 1, f'ncols * nrows must equal prime_num-1'
         assert is_coprime(self.ncols, self.nrows), f'ncols and nrows must be coprime'
 
     def calculate(self) -> 'TableResult':

@@ -1,10 +1,11 @@
 from math import gcd
+from functools import lru_cache
 import typing as tp
 from numbers import Number
 
 __all__ = (
     'SPEED_OF_SOUND', 'wavelength_meters', 'wavelength_cm',
-    'frequency_meters', 'frequency_cm', 'prim_roots',
+    'frequency_meters', 'frequency_cm', 'prim_roots', 'is_prim_root', 'totient',
     'is_prime', 'is_coprime', 'iter_divisors', 'iter_coprimes', 'prime_root_seq',
 )
 
@@ -60,12 +61,40 @@ def frequency_cm(
     """
     return frequency_meters(wavelength / 100, sos)
 
-def prim_roots(modulo: int) -> tp.List[int]:
+@lru_cache(maxsize=1024)
+def get_powers_modulo(g: int, modulo: int) -> tp.Set[int]:
+    return {pow(g, p, modulo) for p in range(1, modulo)}
+
+def prim_roots(modulo: int) -> tp.Iterable[int]:
     """Calculate all :term:`primitive roots <primitive root>` for the given modulo
     """
-    required_set = {num for num in range(1, modulo) if gcd(num, modulo) }
-    return [g for g in range(1, modulo) if required_set == {pow(g, powers, modulo)
-            for powers in range(1, modulo)}]
+    if is_prime(modulo):
+        required = set(range(1, modulo))
+        for g in range(modulo):
+            powers = get_powers_modulo(g, modulo)
+            if powers == required:
+                yield g
+
+def is_prim_root(root: int, modulo: int) -> bool:
+    """Determine if the given *root* is a :term:`primitive root` of *modulo*
+    """
+    if not is_prime(modulo):
+        return False
+    if not is_coprime(root, modulo):
+        return False
+    phi = totient(modulo)
+    result_set = get_powers_modulo(root, modulo)
+    return len(result_set) == phi
+
+@lru_cache
+def totient(n: int) -> int:
+    r"""Compute :term:`Euler's totient function` :math:`\varphi (n)`
+    """
+    count = 0
+    for k in range(1, n+1):
+        if is_coprime(n, k):
+            count += 1
+    return count
 
 def congruence_classes(n: int) -> tp.List[int]:
     results = []
@@ -74,6 +103,7 @@ def congruence_classes(n: int) -> tp.List[int]:
             results.append(k)
     return results
 
+@lru_cache
 def is_prime(n: int) -> bool:
     """Return True if *n* is a prime number
     """

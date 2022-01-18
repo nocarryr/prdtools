@@ -54,9 +54,18 @@ def phi(n):
     return count
 
 def test_prim_roots():
-    for modulo in range(4, 300):
-        roots = math.prim_roots(modulo)
+    for modulo in range(2, 400):
+        roots = list(math.prim_roots(modulo))
         order = phi(modulo)
         power = order * modulo
         print(f'{modulo=}, {order=}, {len(roots)=}')
-        assert all((pow(r, power, modulo) == 1 for r in roots))
+
+        for r in roots:
+            assert pow(r, power, modulo) == 1
+            assert math.is_prim_root(r, modulo)
+
+        all_n = set(range(2, modulo))
+        non_roots = all_n - set(roots)
+        for nr in non_roots:
+            assert nr not in roots
+            assert not math.is_prim_root(nr, modulo)
