@@ -8,6 +8,11 @@ import locale
 import numpy as np
 import numpy.typing as npt
 
+try:
+    import click
+except ImportError:
+    click = None
+
 from .math import *
 
 __all__ = (
@@ -335,7 +340,7 @@ class TableResult:
         return os.linesep.join(lines)
 
 
-def main():
+def _main_argparse():
     locale.setlocale(locale.LC_NUMERIC, '')
     p = argparse.ArgumentParser()
     p.add_argument('ncols', type=int)
@@ -379,6 +384,51 @@ def main():
     print(result.get_info_str(offset=offset))
     print('')
     return result
+
+if click is not None:
+    @click.command()
+    @click.argument('ncols', type=int)
+    @click.argument('nrows', type=int)
+    @click.option('-p', '--prime-num', type=int)
+    @click.option('-r', '--prime-root', type=int)
+    @click.option('-f', '--design-freq', type=int, required=True)
+    @click.option('-w', '--well-width', default=3.81)
+    @click.option('-s', '--speed-of-sound', default=SPEED_OF_SOUND)
+    @click.option('--offset', default=0)
+    @click.option('--format',
+        type=click.Choice(['csv', 'rst'], case_sensitive=False),
+        default='rst',
+    )
+    def build(**kwargs):
+        offset, out_fmt = kwargs.pop('offset'), kwargs.pop('format')
+        param_kw = kwargs.copy()
+
+        if not param_kw['prime_num']:
+            param_kw['prime_num'] = param_kw['ncols'] * param_kw['nrows'] + 1
+        if not param_kw['prime_root']:
+            roots = list(prim_roots(param_kw['prime_num']))
+            if len(roots) > 10:
+                roots = roots[:11]
+            roots = [str(v) for v in roots]
+            pr = click.prompt(
+                'Choose a primitive root', type=click.Choice(roots),
+            )
+            param_kw['prime_root'] = int(pr)
+        result = TableResult.from_kwargs(**param_kw)
+
+        if out_fmt == 'csv':
+            print(result.to_csv(offset=offset))
+        else:
+            print(result.to_rst(offset=offset))
+        print('')
+        print(result.get_info_str(offset=offset))
+        print('')
+
+def main():
+    if click is not None:
+        click_cli()
+    else:
+        _main_argparse()
 
 if __name__ == '__main__':
     main()

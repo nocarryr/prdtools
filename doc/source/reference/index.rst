@@ -11,4 +11,5 @@ Reference
     :maxdepth: 2
 
     table
+    designer
     math
