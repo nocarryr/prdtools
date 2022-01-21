@@ -320,6 +320,20 @@ class TableResult:
             lines.append(row_sep)
         return os.linesep.join(lines)
 
+    def get_info_str(self, offset: tp.Optional[int] = 0) -> str:
+        lines = ['Well Counts:']
+        counts = {k+offset:v for k,v in self.get_well_counts().items()}
+        lines.append(os.linesep.join([f'{k:2d}cm: {v:2d}' for k,v in counts.items()]))
+        total_length = (self.well_heights + offset).sum()
+        p = self.parameters
+        lines.extend([
+            '',
+            f'Total well length: {total_length:n}cm',
+            f'Highest frequency: {p.high_frequency:n} Hz',
+            f'Total size: {p.total_width:.3f}cm x {p.total_height}cm'
+        ])
+        return os.linesep.join(lines)
+
 
 def main():
     locale.setlocale(locale.LC_NUMERIC, '')
@@ -362,15 +376,7 @@ def main():
     else:
         print(result.to_rst(offset=offset))
     print('')
-    print('Well Counts:')
-    counts = result.get_well_counts()
-    print(os.linesep.join([f'{k:2d}cm: {v:2d}' for k,v in counts.items()]))
-    print('')
-    total_length = result.well_heights.sum()
-    print(f'Total well length: {total_length:n}cm')
-    p = result.parameters
-    print(f'Highest frequency: {p.high_frequency:n} Hz')
-    print(f'Total size: {p.total_width:.3f}cm x {p.total_height}cm')
+    print(result.get_info_str(offset=offset))
     print('')
     return result
 
