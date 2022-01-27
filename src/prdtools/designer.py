@@ -39,7 +39,7 @@ class Designer:
         p = self.prime_num
         x = p + 1
         while True:
-            if all(x % i != 0 for i in range(2, int(x**.5)+1)):
+            if is_prime(x):
                 self.prime_num = x
                 return x
             x += 1

@@ -128,21 +128,13 @@ def congruence_classes(n: int) -> tp.List[int]:
             results.append(k)
     return results
 
-@lru_cache
 def is_prime(n: int) -> bool:
     """Return True if *n* is a prime number
     """
     n = abs(n)
     if n == 0:
         return False
-    elif n <= 3:
-        return True
-    elif n == 4:
-        return False
-    for i in range(2, n // 2):
-        if n % i == 0:
-            return False
-    return True
+    return all((n % i != 0 for i in range(2, int(n**.5)+1)))
 
 def is_coprime(a: int, b: int) -> bool:
     """Return True if a and b are :term:`coprime`
