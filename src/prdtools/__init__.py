@@ -8,6 +8,11 @@ bl_info = {
     'category':'Add Mesh',
 }
 
+if 'bpy' in locals():
+    import importlib
+
+    importlib.reload(bladdon)
+
 try:
     import bpy
 except ImportError:
