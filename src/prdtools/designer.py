@@ -142,7 +142,10 @@ class DesignResult:
     def get_primitive_roots(self) -> tp.List[int]:
         """Get all :term:`primitive roots <primitive root>` of :attr:`prime_num`
         """
-        return list(prim_roots(self.prime_num))
+        return list(self.iter_primitive_roots())
+
+    def iter_primitive_roots(self) -> tp.Iterable[int]:
+        yield from prim_roots(self.prime_num)
 
     def choose_primitive_root(self) -> int:
         """Find the smallest :term:`primitive root` of :attr:`prime_num`
