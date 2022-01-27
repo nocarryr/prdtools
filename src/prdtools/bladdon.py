@@ -175,11 +175,11 @@ class PrdBuilderOp(bpy.types.Operator):
     def setup_scene_props(self, context, result: TableResult):
         scene_props = context.scene.prd_data
         p = result.parameters
-        width = scene_props.well_width = p.well_width
+        width = scene_props.well_width = p.well_width * .01
 
-        scene_props.array_dimensions.x = p.total_width
-        scene_props.array_dimensions.y = p.total_height
-        scene_props.array_dimensions.z = result.well_heights.max()
+        scene_props.array_dimensions.x = p.total_width * .01
+        scene_props.array_dimensions.y = p.total_height * .01
+        scene_props.array_dimensions.z = result.well_heights.max() * .01
 
     def build_objects(self, context, result: TableResult):
         scene_props = context.scene.prd_data
@@ -187,9 +187,10 @@ class PrdBuilderOp(bpy.types.Operator):
 
         width = scene_props.well_width
         half_width = width / 2
-        total_y = scene_props.array_shape[1]
+        total_y = scene_props.array_dimensions[1]
 
         base_coll, obj_coll = scene_props.base_coll, scene_props.obj_coll
+        empty_size = width
 
         bpy.ops.mesh.primitive_cube_add(size=width)
         base_cube = context.active_object
@@ -198,7 +199,7 @@ class PrdBuilderOp(bpy.types.Operator):
         context.scene.cursor.location = [0, 0, 0]
         base_cube.location.z = half_width
         bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
-        base_cube.dimensions.z = 1
+        base_cube.dimensions.z = .01
         bpy.ops.object.transform_apply(location=False, properties=False)
 
         instance_mode = build_settings.instance_mode
@@ -211,6 +212,7 @@ class PrdBuilderOp(bpy.types.Operator):
                 if instance_mode == 'COLLECTION':
                     bpy.ops.object.collection_instance_add(collection=base_coll.name)
                     obj = context.active_object
+                    obj.empty_display_size = empty_size
                 elif instance_mode == 'OBJECT':
                     bpy.ops.object.duplicate(linked=True)
                     obj = context.active_object
