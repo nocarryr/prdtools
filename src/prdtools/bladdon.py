@@ -141,8 +141,8 @@ class PrdBuilderOp(bpy.types.Operator):
         scene_props = context.scene.prd_data
 
         parameters = TableParameters(
-            ncols=scene_props.array_shape[0],
-            nrows=scene_props.array_shape[1],
+            nrows=scene_props.array_shape[0],
+            ncols=scene_props.array_shape[1],
             prime_num=scene_props.prime_num,
             prime_root=scene_props.prime_root,
             design_freq=scene_props.design_freq,
@@ -203,11 +203,11 @@ class PrdBuilderOp(bpy.types.Operator):
 
         instance_mode = build_settings.instance_mode
 
-        for i in range(result.well_heights.shape[0]):
-            y = i * -width + total_y + half_width
-            for j in range(result.well_heights.shape[1]):
-                well_height = result.well_heights[i,j]
-                x = width * j + half_width
+        for col_idx in range(result.well_heights.shape[1]):
+            x = width * col_idx + half_width
+            for row_idx in range(result.well_heights.shape[0]):
+                well_height = result.well_heights[row_idx,col_idx]
+                y = width * -row_idx - half_width + total_y
                 if instance_mode == 'COLLECTION':
                     bpy.ops.object.collection_instance_add(collection=base_coll.name)
                     obj = context.active_object
@@ -222,9 +222,10 @@ class PrdBuilderOp(bpy.types.Operator):
                 obj.location.x = x
                 obj.location.y = y
                 obj.scale.z = well_height
-                obj.prd_data.row = i
-                obj.prd_data.column = j
+                obj.prd_data.row = row_idx
+                obj.prd_data.column = col_idx
                 obj.prd_data.height = well_height
+                obj.name = f'Well.{row_idx:02d}.{col_idx:02d}'
 
 class PrdParamsPanel(bpy.types.Panel):
     bl_idname = 'VIEW_3D_PT_prd_params'
