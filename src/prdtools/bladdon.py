@@ -156,7 +156,8 @@ class PrdDesignerProps(PrdBaseProps):
     )
     chosen_index: bpy.props.IntProperty(
         name='chosen_index',
-        min=0,
+        min=-1,
+        default=-1,
     )
     ncols: bpy.props.IntProperty(
         name='Columns',
@@ -184,41 +185,30 @@ class PrdDesignerProps(PrdBaseProps):
 class PrdDesignerResultProps(bpy.types.PropertyGroup):
     MAX_RESULTS = 32
     MAX_PRIM_ROOTS = 32
-    num_results: bpy.props.IntProperty(
-        name='num_results',
-        default=0,
+    num_prim_roots: bpy.props.IntProperty(
+        name='num_prim_roots',
+        min=-1,
     )
-    primitive_roots: bpy.props.IntVectorProperty(   # <-- not indexed with other props
+    primitive_roots: bpy.props.IntVectorProperty(
         name='primitive_roots',
         min=0,
         size=MAX_PRIM_ROOTS,
     )
-    prime_num: bpy.props.IntVectorProperty(
+    prime_num: bpy.props.IntProperty(
         name='prime_num',
         min=0,
-        size=MAX_RESULTS,
     )
-    ncols: bpy.props.IntVectorProperty(
+    ncols: bpy.props.IntProperty(
         name='ncols',
         min=0,
-        size=MAX_RESULTS,
     )
-    nrows: bpy.props.IntVectorProperty(
+    nrows: bpy.props.IntProperty(
         name='nrows',
         min=0,
-        size=MAX_RESULTS,
     )
-    aspect_ratio: bpy.props.FloatVectorProperty(
+    aspect_ratio: bpy.props.FloatProperty(
         name='aspect_ratio',
-        size=MAX_RESULTS,
     )
-    def reset(self):
-        self.num_results = 0
-        self.primitive_roots = [0] * self.MAX_PRIM_ROOTS
-        self.prime_num = [0] * self.MAX_RESULTS
-        self.ncols = [0] * self.MAX_RESULTS
-        self.nrows = [0] * self.MAX_RESULTS
-        self.aspect_ratio = [0] * self.MAX_RESULTS
 
 class PrdDesignerOp(bpy.types.Operator):
     bl_idname='prdutils.design'
@@ -252,54 +242,44 @@ class PrdDesignerOp(bpy.types.Operator):
 
     def reset_props(self, context):
         designer_props = context.scene.prd_designer_props
-        result_props = context.scene.prd_designer_results
-        designer_props.chosen_index = 0
-        result_props.reset()
+        designer_props.chosen_index = -1
+        context.scene.prd_designer_results.clear()
 
     def build_results(self, context):
         designer_props = context.scene.prd_designer_props
-        result_props = context.scene.prd_designer_results
         designer = Designer(
             aspect_ratio_min=designer_props.aspect_ratio_min,
             aspect_ratio_max=designer_props.aspect_ratio_max,
         )
         designer_props.chosen_index = 0
-        result_props.reset()
         if designer_props.mode == 'COLUMNS':
             result_iter = designer.from_ncols(designer_props.ncols)
         elif designer_props.mode == 'PRIME':
             result_iter = designer.from_prime_num(designer_props.prime_num)
 
         for result in result_iter:
-            i = result_props.num_results
-            if i == 0 and designer_props.prime_root == 0:
-                for j, root in enumerate(result.iter_primitive_roots()):
-                    if j >= PrdDesignerResultProps.MAX_PRIM_ROOTS:
-                        break
-                    result_props.primitive_roots[j] = root
-                    if j == 0:
-                        designer_props.prime_root = root
-
-            result_props.prime_num[i] = result.prime_num
-            result_props.ncols[i] = result.ncols
-            result_props.nrows[i] = result.nrows
-            result_props.aspect_ratio[i] = result.aspect_ratio
-            result_props.num_results += 1
-        self.report({'INFO'}, f'{result_props.num_results=}')
+            root_iter = result.iter_primitive_roots()
+            max_roots = PrdDesignerResultProps.MAX_PRIM_ROOTS
+            roots = [r for r, _ in zip(root_iter, range(max_roots))]
+            nroots = len(roots)
+            result_props = context.scene.prd_designer_results.add()
+            result_props.num_prim_roots = nroots
+            result_props.primitive_roots[:nroots] = roots
+            for attr in ['prime_num', 'ncols', 'nrows', 'aspect_ratio']:
+                val = getattr(result, attr)
+                setattr(result_props, attr, val)
 
     def set_chosen_index(self, context):
         designer_props = context.scene.prd_designer_props
-        result_props = context.scene.prd_designer_results
         i = designer_props.chosen_index
-        assert 0 <= i < result_props.num_results
+        result_props = context.scene.prd_designer_results[i]
         keys = ['prime_num', 'ncols', 'nrows', 'aspect_ratio']
         for key in keys:
-            val = getattr(result_props, key)[i]
+            val = getattr(result_props, key)
             setattr(designer_props, key, val)
 
     def build(self, context):
         designer_props = context.scene.prd_designer_props
-        result_props = context.scene.prd_designer_results
         build_settings = context.scene.prd_data.builder_props
         scene_props = context.scene.prd_data
         keys = [
@@ -326,10 +306,10 @@ class PrdDesignerNextIndex(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         designer_props = context.scene.prd_designer_props
-        result_props = context.scene.prd_designer_results
+        num_results = len(context.scene.prd_designer_results)
         if designer_props.state != 'RESULTS_BUILT':
             return False
-        if designer_props.chosen_index >= result_props.num_results - 1:
+        if designer_props.chosen_index >= num_results - 1:
             return False
         return True
 
@@ -347,7 +327,6 @@ class PrdDesignerPrevIndex(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         designer_props = context.scene.prd_designer_props
-        result_props = context.scene.prd_designer_results
         if designer_props.state != 'RESULTS_BUILT':
             return False
         if designer_props.chosen_index <= 0:
@@ -583,7 +562,7 @@ def register():
     PrdSceneProps.builder_props = bpy.props.PointerProperty(type=PrdBuilderProps)
     bpy.types.Scene.prd_data = bpy.props.PointerProperty(type=PrdSceneProps)
     bpy.types.Scene.prd_designer_props = bpy.props.PointerProperty(type=PrdDesignerProps)
-    bpy.types.Scene.prd_designer_results = bpy.props.PointerProperty(type=PrdDesignerResultProps)
+    bpy.types.Scene.prd_designer_results = bpy.props.CollectionProperty(type=PrdDesignerResultProps)
     bpy.types.Object.prd_data = bpy.props.PointerProperty(type=PrdWellProps)
 
 def unregister():
