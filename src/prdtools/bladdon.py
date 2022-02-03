@@ -180,7 +180,21 @@ class PrdDesignerProps(PrdBaseProps):
         description='Maximum aspect ratio',
         default=2.5,
     )
-
+    def get_prim_root_choices(self, context):
+        ix = self.chosen_index
+        num_results = len(context.scene.prd_designer_results)
+        if ix < 0 or num_results == 0:
+            return []
+        result_props = context.scene.prd_designer_results[ix]
+        roots = list(result_props.primitive_roots)
+        roots = roots[:result_props.num_prim_roots]
+        choices = [tuple([str(r)]*3) for r in roots]
+        return choices
+    prime_root: bpy.props.EnumProperty(
+        name='Primitive root',
+        description='A primitive root of prime_num',
+        items=get_prim_root_choices,
+    )
 
 class PrdDesignerResultProps(bpy.types.PropertyGroup):
     MAX_RESULTS = 32
@@ -288,6 +302,8 @@ class PrdDesignerOp(bpy.types.Operator):
         ]
         for key in keys:
             val = getattr(designer_props, key)
+            if key == 'prime_root':
+                val = int(val)
             setattr(scene_props, key, val)
         bpy.ops.prdutils.build('INVOKE_DEFAULT')
 
