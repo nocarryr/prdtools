@@ -8,9 +8,10 @@ bl_info = {
     'category':'Add Mesh',
 }
 
+import json
 import bpy
 
-from .table import TableParameters, TableResult
+from .table import TableParameters, TableResult, ValidationError
 from .designer import Designer
 from .math import SPEED_OF_SOUND
 
@@ -138,9 +139,46 @@ class PrdBuilderProps(bpy.types.PropertyGroup):
         ],
         default='INITIAL',
     )
+    error: bpy.props.BoolProperty(
+        name='Error',
+        default=False,
+    )
+    error_message: bpy.props.StringProperty(
+        name='Error Message',
+        default='',
+    )
+    error_field_names: bpy.props.StringProperty(
+        name='Error Field Names',
+        default='',
+    )
+    error_fields: bpy.props.StringProperty(
+        name='Error Fields',
+        default='',
+    )
+
     @classmethod
     def check(cls, value):
         return value in [opt[0] for opt in cls.instance_mode_options]
+
+    def get_error(self):
+        if not self.error:
+            return None, None, None
+        field_names = [s.strip(' ') for s in self.error_field_names.split(',')]
+        fields = json.loads(self.error_fields)
+        return self.error_message, field_names, fields
+
+    def set_error(self, exc: ValidationError):
+        self.error = True
+        self.error_message = exc.msg
+        self.error_field_names = ','.join(exc.field_names)
+        self.error_fields = json.dumps(exc.fields)
+
+    def clear_error(self):
+        self.error = False
+        self.error_message = ''
+        self.error_field_names = ''
+        self.error_fields = ''
+
 
 class PrdDesignerProps(PrdBaseProps):
     mode: bpy.props.EnumProperty(
@@ -397,16 +435,23 @@ class PrdBuilderOp(bpy.types.Operator):
     def execute(self, context):
         build_settings = context.scene.prd_data.builder_props
         scene_props = context.scene.prd_data
+        build_settings.clear_error()
 
-        parameters = TableParameters(
-            nrows=scene_props.array_shape[0],
-            ncols=scene_props.array_shape[1],
-            prime_num=scene_props.prime_num,
-            prime_root=scene_props.prime_root,
-            design_freq=scene_props.design_freq,
-            speed_of_sound=scene_props.speed_of_sound,
-        )
-        result = parameters.calculate()
+        try:
+            parameters = TableParameters(
+                nrows=scene_props.array_shape[0],
+                ncols=scene_props.array_shape[1],
+                prime_num=scene_props.prime_num,
+                prime_root=scene_props.prime_root,
+                design_freq=scene_props.design_freq,
+                speed_of_sound=scene_props.speed_of_sound,
+            )
+            result = parameters.calculate()
+        except ValidationError as exc:
+            build_settings.set_error(exc)
+            self.report({'WARNING'}, str(exc))
+            return {'CANCELLED'}
+
         result.well_heights += build_settings.well_offset
 
         build_settings.state = 'BUILDING'
@@ -531,22 +576,41 @@ class PrdParamsPanel(bpy.types.Panel):
         main_box = layout.box()
         main_box.label(text='PRD Parameters')
 
+        if build_settings.error:
+            error_msg, error_field_names, error_fields = build_settings.get_error()
+        else:
+            error_msg = None
+            error_field_names = []
+
+        def prop_row(parent_layout, data, prop_name):
+            if prop_name in error_field_names:
+                row = parent_layout.row()
+                row.alert = True
+                row.prop(data, prop_name)
+            else:
+                parent_layout.prop(data, prop_name)
+
         box = main_box.box()
         box.label(text='Dimensions')
-        box.prop(scene_props, 'ncols')
-        box.prop(scene_props, 'nrows')
+        prop_row(box, scene_props, 'ncols')
+        prop_row(box, scene_props, 'nrows')
         box.prop(build_settings, 'well_offset')
 
         box = main_box.box()
         box.label(text='General')
-        box.prop(scene_props, 'prime_num')
-        box.prop(scene_props, 'prime_root')
-        box.prop(scene_props, 'design_freq')
+        prop_row(box, scene_props, 'prime_num')
+        prop_row(box, scene_props, 'prime_root')
+        prop_row(box, scene_props, 'design_freq')
+        prop_row(box, scene_props, 'speed_of_sound')
         box.prop(scene_props, 'speed_of_sound')
         box.prop(build_settings, 'instance_mode')
 
         box = main_box.box()
-        box.operator('prdutils.build')
+        if error_msg is not None:
+            box.label(text=error_msg)
+        row = box.row()
+        row.operator(PrdBuilderOp.bl_idname)
+        row.operator(PrdBuilderClear.bl_idname)
 
 class PrdDesignerPanel(bpy.types.Panel):
     bl_idname = 'VIEW_3D_PT_prd_designer'
