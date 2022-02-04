@@ -454,6 +454,7 @@ class PrdBuilderOp(bpy.types.Operator):
 
         bpy.ops.mesh.primitive_cube_add(size=width)
         base_cube = context.active_object
+        base_cube.name = 'Well.Base'
         move_to_collection(base_cube, base_coll)
 
         context.scene.cursor.location = [0, 0, 0]
