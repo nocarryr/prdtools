@@ -427,6 +427,7 @@ class PrdBuilderOp(bpy.types.Operator):
             coll = bpy.data.collections[-1]
             setattr(scene_props, attr, coll)
             context.scene.collection.children.link(coll)
+            clear_collection_objects(coll)
 
         scene_props.base_coll.hide_render = True
 
@@ -448,6 +449,7 @@ class PrdBuilderOp(bpy.types.Operator):
         total_y = scene_props.array_dimensions[1]
 
         base_coll, obj_coll = scene_props.base_coll, scene_props.obj_coll
+        base_coll.hide_viewport = False
         empty_size = width
 
         bpy.ops.mesh.primitive_cube_add(size=width)
@@ -486,6 +488,8 @@ class PrdBuilderOp(bpy.types.Operator):
                 obj.prd_data.column = col_idx
                 obj.prd_data.height = well_height
                 obj.name = f'Well.{row_idx:02d}.{col_idx:02d}'
+        if instance_mode != 'COLLECTION':
+            base_coll.hide_viewport = True
 
 class PrdBuilderClear(bpy.types.Operator):
     bl_idname = 'prdutils.clear'
