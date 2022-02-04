@@ -129,6 +129,14 @@ class PrdBuilderProps(bpy.types.PropertyGroup):
         description='Amount to offset well heights',
         default=1,
     )
+    state: bpy.props.EnumProperty(
+        items=[
+            ('INITIAL', 'initial', 'initial'),
+            ('BUILDING', 'building', 'building'),
+            ('BUILT', 'built', 'built'),
+        ],
+        default='INITIAL',
+    )
     @classmethod
     def check(cls, value):
         return value in [opt[0] for opt in cls.instance_mode_options]
@@ -236,6 +244,11 @@ class PrdDesignerOp(bpy.types.Operator):
         default='NORMAL',
     )
 
+    @classmethod
+    def poll(cls, context):
+        designer_props = context.scene.prd_designer_props
+        return designer_props.state != 'RESULTS_BUILT'
+
     def execute(self, context):
         designer_props = context.scene.prd_designer_props
         if self.action == 'RESET':
@@ -248,9 +261,6 @@ class PrdDesignerOp(bpy.types.Operator):
             self.set_chosen_index(context)
         elif designer_props.state == 'SET_INDEX':
             self.set_chosen_index(context)
-            designer_props.state = 'RESULTS_BUILT'
-        elif designer_props.state in ['RESULTS_BUILT', 'BUILD']:
-            self.build(context)
             designer_props.state = 'RESULTS_BUILT'
         return {'FINISHED'}
 
@@ -292,7 +302,21 @@ class PrdDesignerOp(bpy.types.Operator):
             val = getattr(result_props, key)
             setattr(designer_props, key, val)
 
-    def build(self, context):
+class PrdDesignerBuildOp(bpy.types.Operator):
+    bl_idname = 'prdutils.design_build'
+    bl_label = 'Build'
+
+    @classmethod
+    def poll(cls, context):
+        designer_props = context.scene.prd_designer_props
+        build_settings = context.scene.prd_data.builder_props
+        if build_settings.state != 'INITIAL':
+            return False
+        if designer_props.state != 'RESULTS_BUILT':
+            return False
+        return True
+
+    def execute(self, context):
         designer_props = context.scene.prd_designer_props
         build_settings = context.scene.prd_data.builder_props
         scene_props = context.scene.prd_data
@@ -306,6 +330,8 @@ class PrdDesignerOp(bpy.types.Operator):
                 val = int(val)
             setattr(scene_props, key, val)
         bpy.ops.prdutils.build('INVOKE_DEFAULT')
+        designer_props.state = 'RESULTS_BUILT'
+        return {'FINISHED'}
 
 class PrdDesignerResetOp(bpy.types.Operator):
     bl_idname = 'prdutils.design_reset'
@@ -362,6 +388,11 @@ class PrdBuilderOp(bpy.types.Operator):
     bl_idname = "prdutils.build"
     bl_label = 'Build PRD Scene'
 
+    @classmethod
+    def poll(cls, context):
+        build_settings = context.scene.prd_data.builder_props
+        return build_settings.state != 'BUILT'
+
     def execute(self, context):
         build_settings = context.scene.prd_data.builder_props
         scene_props = context.scene.prd_data
@@ -377,9 +408,11 @@ class PrdBuilderOp(bpy.types.Operator):
         result = parameters.calculate()
         result.well_heights += build_settings.well_offset
 
+        build_settings.state = 'BUILDING'
         self.build_collections(context)
         self.setup_scene_props(context, result)
         self.build_objects(context, result)
+        build_settings.state = 'BUILT'
         return {'FINISHED'}
 
     def build_collections(self, context):
@@ -393,7 +426,6 @@ class PrdBuilderOp(bpy.types.Operator):
             bpy.ops.collection.create(name=coll_name)
             coll = bpy.data.collections[-1]
             setattr(scene_props, attr, coll)
-            clear_collection_objects(coll)
             context.scene.collection.children.link(coll)
 
         scene_props.base_coll.hide_render = True
@@ -454,6 +486,29 @@ class PrdBuilderOp(bpy.types.Operator):
                 obj.prd_data.column = col_idx
                 obj.prd_data.height = well_height
                 obj.name = f'Well.{row_idx:02d}.{col_idx:02d}'
+
+class PrdBuilderClear(bpy.types.Operator):
+    bl_idname = 'prdutils.clear'
+    bl_label = 'Clear Objects'
+
+    @classmethod
+    def poll(cls, context):
+        build_settings = context.scene.prd_data.builder_props
+        return build_settings.state != 'INITIAL'
+
+    def execute(self, context):
+        scene_props = context.scene.prd_data
+        build_settings = context.scene.prd_data.builder_props
+
+        for attr in ['base_coll', 'obj_coll']:
+            coll = getattr(scene_props, attr)
+            if coll is None:
+                continue
+            objs = set(coll.objects.values())
+            for obj in objs:
+                bpy.data.objects.remove(obj)
+        build_settings.state = 'INITIAL'
+        return {'FINISHED'}
 
 class PrdParamsPanel(bpy.types.Panel):
     bl_idname = 'VIEW_3D_PT_prd_params'
@@ -560,14 +615,16 @@ class PrdDesignerPanel(bpy.types.Panel):
             grid.prop(build_settings, 'instance_mode', text='')
 
         if designer_props.state == 'RESULTS_BUILT':
-            main_box.operator(PrdDesignerOp.bl_idname, text='Build')
+            row = main_box.row()
+            row.operator(PrdDesignerBuildOp.bl_idname)
+            row.operator(PrdBuilderClear.bl_idname)
         elif designer_props.state != 'INITIAL':
             main_box.operator(PrdDesignerOp.bl_idname, text='Find Results')
 
 
 bl_classes = [
-    PrdSceneProps, PrdWellProps, PrdBuilderProps, PrdBuilderOp,
-    PrdDesignerProps, PrdDesignerResultProps, PrdDesignerOp,
+    PrdSceneProps, PrdWellProps, PrdBuilderProps, PrdBuilderOp, PrdBuilderClear,
+    PrdDesignerProps, PrdDesignerResultProps, PrdDesignerOp, PrdDesignerBuildOp,
     PrdDesignerNextIndex, PrdDesignerPrevIndex, PrdDesignerResetOp,
     PrdDesignerPanel, PrdParamsPanel,
 ]
