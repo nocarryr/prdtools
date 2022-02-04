@@ -36,6 +36,7 @@ class PrdBaseProps(bpy.types.PropertyGroup):
     design_freq: bpy.props.IntProperty(
         name='Design Frequency',
         description='The lowest frequency (in Hz) the diffusor is designed for',
+        default=500,
     )
     well_width: bpy.props.FloatProperty(
         name='Well Width',
