@@ -79,6 +79,18 @@ class PrdSceneProps(PrdBaseProps):
         name='Object Collection',
         description='Collection to store all instanced meshes',
     )
+    def on_material_update(self, context):
+        base_obj = self.get_base_obj()
+        if base_obj is not None:
+            base_obj.active_material = self.material
+        if self.builder_props.instance_mode == 'OBJECT_DATA':
+            for obj in self.iter_well_objs():
+                obj.active_material = self.material
+    material: bpy.props.PointerProperty(
+        type=bpy.types.Material,
+        name='Material',
+        update=on_material_update,
+    )
     def _get_ncols(self): return self.array_shape[1]
     def _set_ncols(self, value):
         if value != self.array_shape[1]:
@@ -527,6 +539,7 @@ class PrdBuilderOp(bpy.types.Operator):
         base_cube = context.active_object
         base_cube.name = 'Well.Base'
         base_cube.prd_data.is_base_obj = True
+        base_cube.active_material = scene_props.material
         move_to_collection(base_cube, base_coll)
 
         context.scene.cursor.location = [0, 0, 0]
@@ -592,6 +605,18 @@ class PrdBuilderClear(bpy.types.Operator):
         build_settings.state = 'INITIAL'
         return {'FINISHED'}
 
+
+class PrdSceneMaterialNew(bpy.types.Operator):
+    bl_idname = 'prdutils.scene_material_new'
+    bl_label = 'Add Material'
+
+    def execute(self, context):
+        mat = bpy.data.materials.new('Material')
+        scene_props = context.scene.prd_data
+        scene_props.material = mat
+        return {'FINISHED'}
+
+
 class PrdParamsPanel(bpy.types.Panel):
     bl_idname = 'VIEW_3D_PT_prd_params'
     bl_label = 'PRD Parameters'
@@ -635,6 +660,10 @@ class PrdParamsPanel(bpy.types.Panel):
         prop_row(box, scene_props, 'speed_of_sound')
         box.prop(scene_props, 'speed_of_sound')
         box.prop(build_settings, 'instance_mode')
+
+        box = main_box.box()
+        box.label(text='Material')
+        box.template_ID(scene_props, 'material', new=PrdSceneMaterialNew.bl_idname)
 
         box = main_box.box()
         if error_msg is not None:
@@ -715,6 +744,10 @@ class PrdDesignerPanel(bpy.types.Panel):
             grid.label(text='Instance Mode')
             grid.prop(build_settings, 'instance_mode', text='')
 
+        box = main_box.box()
+        box.label(text='Material')
+        box.template_ID(scene_props, 'material', new=PrdSceneMaterialNew.bl_idname)
+
         if designer_props.state == 'RESULTS_BUILT':
             row = main_box.row()
             row.operator(PrdDesignerBuildOp.bl_idname)
@@ -726,7 +759,7 @@ class PrdDesignerPanel(bpy.types.Panel):
 bl_classes = [
     PrdSceneProps, PrdWellProps, PrdBuilderProps, PrdBuilderOp, PrdBuilderClear,
     PrdDesignerProps, PrdDesignerResultProps, PrdDesignerOp, PrdDesignerBuildOp,
-    PrdDesignerNextIndex, PrdDesignerPrevIndex, PrdDesignerResetOp,
+    PrdDesignerNextIndex, PrdDesignerPrevIndex, PrdDesignerResetOp, PrdSceneMaterialNew,
     PrdDesignerPanel, PrdParamsPanel,
 ]
 
