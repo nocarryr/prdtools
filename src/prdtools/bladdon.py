@@ -108,11 +108,36 @@ class PrdSceneProps(PrdBaseProps):
         subtype='XYZ_LENGTH',
     )
 
+    def get_base_obj(self):
+        coll = self.base_coll
+        if coll is None:
+            return None
+        objs = [obj for obj in coll.objects if obj.prd_data.is_base_obj]
+        if not len(objs):
+            return None
+        assert len(objs) == 1
+        return objs[0]
+
+    def iter_well_objs(self):
+        coll = self.obj_coll
+        if coll is not None:
+            for obj in coll.objects:
+                if obj.prd_data.is_well_obj:
+                    yield obj
+
 
 class PrdWellProps(bpy.types.PropertyGroup):
-    row: bpy.props.IntProperty(default=-1)
-    column: bpy.props.IntProperty(default=-1)
-    height: bpy.props.IntProperty(default=-1)
+    is_base_obj: bpy.props.BoolProperty(
+        name='Is Base Obj',
+        default=False,
+    )
+    is_well_obj: bpy.props.BoolProperty(
+        name='Is Well Obj',
+        default=False,
+    )
+    row: bpy.props.IntProperty(name='Row', default=-1)
+    column: bpy.props.IntProperty(name='Column', default=-1)
+    height: bpy.props.IntProperty(name='Height', default=-1)
 
 class PrdBuilderProps(bpy.types.PropertyGroup):
     instance_mode_options = [
@@ -501,6 +526,7 @@ class PrdBuilderOp(bpy.types.Operator):
         bpy.ops.mesh.primitive_cube_add(size=width)
         base_cube = context.active_object
         base_cube.name = 'Well.Base'
+        base_cube.prd_data.is_base_obj = True
         move_to_collection(base_cube, base_coll)
 
         context.scene.cursor.location = [0, 0, 0]
@@ -535,6 +561,7 @@ class PrdBuilderOp(bpy.types.Operator):
                 obj.prd_data.row = row_idx
                 obj.prd_data.column = col_idx
                 obj.prd_data.height = well_height
+                obj.prd_data.is_well_obj = True
                 obj.name = f'Well.{row_idx:02d}.{col_idx:02d}'
         if instance_mode != 'COLLECTION':
             base_coll.hide_viewport = True
