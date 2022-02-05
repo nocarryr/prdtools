@@ -526,6 +526,7 @@ class PrdBuilderOp(bpy.types.Operator):
                 elif instance_mode == 'OBJECT_DATA':
                     bpy.ops.object.duplicate(linked=False)
                     obj = context.active_object
+                    obj.data = obj.data.copy()
                 move_to_collection(obj, obj_coll)
 
                 obj.location.x = x
@@ -557,7 +558,10 @@ class PrdBuilderClear(bpy.types.Operator):
                 continue
             objs = set(coll.objects.values())
             for obj in objs:
-                bpy.data.objects.remove(obj)
+                if obj.type == 'MESH':
+                    bpy.data.meshes.remove(obj.data)
+                else:
+                    bpy.data.objects.remove(obj)
         build_settings.state = 'INITIAL'
         return {'FINISHED'}
 
