@@ -42,7 +42,9 @@ class PrdBaseProps(bpy.types.PropertyGroup):
     well_width: bpy.props.FloatProperty(
         name='Well Width',
         description='The width/height (in cm) of each well',
-        default=3.81,
+        default=.0381,
+        subtype='DISTANCE',
+        unit='LENGTH',
     )
     speed_of_sound: bpy.props.IntProperty(
         name='Speed of Sound',
@@ -118,6 +120,7 @@ class PrdSceneProps(PrdBaseProps):
         name='Array Dimensions',
         description='Overall Dimensions (in scene space) of the well array',
         subtype='XYZ_LENGTH',
+        unit='LENGTH',
     )
 
     def get_base_obj(self):
@@ -149,7 +152,12 @@ class PrdWellProps(bpy.types.PropertyGroup):
     )
     row: bpy.props.IntProperty(name='Row', default=-1)
     column: bpy.props.IntProperty(name='Column', default=-1)
-    height: bpy.props.IntProperty(name='Height', default=-1)
+    height: bpy.props.FloatProperty(
+        name='Height',
+        default=-1,
+        subtype='DISTANCE',
+        unit='LENGTH',
+    )
 
 class PrdBuilderProps(bpy.types.PropertyGroup):
     instance_mode_options = [
@@ -163,10 +171,12 @@ class PrdBuilderProps(bpy.types.PropertyGroup):
         description='Method of creating the individual well objects',
         default='COLLECTION',
     )
-    well_offset: bpy.props.IntProperty(
+    well_offset: bpy.props.FloatProperty(
         name='Well Offset',
         description='Amount to offset well heights',
-        default=1,
+        default=.01,
+        subtype='DISTANCE',
+        unit='LENGTH',
     )
     state: bpy.props.EnumProperty(
         items=[
@@ -488,6 +498,7 @@ class PrdBuilderOp(bpy.types.Operator):
                 prime_root=scene_props.prime_root,
                 design_freq=scene_props.design_freq,
                 speed_of_sound=scene_props.speed_of_sound,
+                well_width=scene_props.well_width * 100,
             )
             result = parameters.calculate()
         except ValidationError as exc:
@@ -495,7 +506,7 @@ class PrdBuilderOp(bpy.types.Operator):
             self.report({'WARNING'}, str(exc))
             return {'CANCELLED'}
 
-        result.well_heights += build_settings.well_offset
+        result.well_heights = result.well_heights * .01 + build_settings.well_offset
 
         build_settings.state = 'BUILDING'
         self.build_collections(context)
@@ -527,7 +538,7 @@ class PrdBuilderOp(bpy.types.Operator):
 
         scene_props.array_dimensions.x = p.total_width * .01
         scene_props.array_dimensions.y = p.total_height * .01
-        scene_props.array_dimensions.z = result.well_heights.max() * .01
+        scene_props.array_dimensions.z = result.well_heights.max()
 
     def build_objects(self, context, result: TableResult):
         scene_props = context.scene.prd_data
@@ -551,7 +562,7 @@ class PrdBuilderOp(bpy.types.Operator):
         context.scene.cursor.location = [0, 0, 0]
         base_cube.location.z = half_width
         bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
-        base_cube.dimensions.z = .01
+        base_cube.dimensions.z = 1
         bpy.ops.object.transform_apply(location=False, properties=False)
 
         instance_mode = build_settings.instance_mode
