@@ -62,6 +62,13 @@ class PrdBaseProps(bpy.types.PropertyGroup):
     )
 
 class PrdSceneProps(PrdBaseProps):
+    @classmethod
+    def register(cls):
+        bpy.types.Scene.prd_data = bpy.props.PointerProperty(type=cls)
+    @classmethod
+    def unregister(cls):
+        del bpy.types.Scene.prd_data
+
     base_coll_name: bpy.props.StringProperty(
         name='Base Collection Name',
         description='Base Collection Name',
@@ -143,6 +150,13 @@ class PrdSceneProps(PrdBaseProps):
 
 
 class PrdWellProps(bpy.types.PropertyGroup):
+    @classmethod
+    def register(cls):
+        bpy.types.Object.prd_data = bpy.props.PointerProperty(type=cls)
+    @classmethod
+    def unregister(cls):
+        del bpy.types.Object.prd_data
+
     is_base_obj: bpy.props.BoolProperty(
         name='Is Base Obj',
         default=False,
@@ -162,6 +176,13 @@ class PrdWellProps(bpy.types.PropertyGroup):
     )
 
 class PrdBuilderProps(bpy.types.PropertyGroup):
+    @classmethod
+    def register(cls):
+        PrdSceneProps.builder_props = bpy.props.PointerProperty(type=cls)
+    @classmethod
+    def unregister(cls):
+        del PrdSceneProps.builder_props
+
     instance_mode_options = [
         ('COLLECTION', 'Collection', 'Create wells as collection instances'),
         ('OBJECT', 'Object', 'Duplicate each well using the same data (mesh)'),
@@ -230,6 +251,13 @@ class PrdBuilderProps(bpy.types.PropertyGroup):
 
 
 class PrdDesignerProps(PrdBaseProps):
+    @classmethod
+    def register(cls):
+        bpy.types.Scene.prd_designer_props = bpy.props.PointerProperty(type=cls)
+    @classmethod
+    def unregister(cls):
+        del bpy.types.Scene.prd_designer_props
+
     mode: bpy.props.EnumProperty(
         items=[
             ('COLUMNS', 'Columns', 'Design from number of columns'),
@@ -295,6 +323,14 @@ class PrdDesignerProps(PrdBaseProps):
 class PrdDesignerResultProps(bpy.types.PropertyGroup):
     MAX_RESULTS = 32
     MAX_PRIM_ROOTS = 32
+
+    @classmethod
+    def register(cls):
+        bpy.types.Scene.prd_designer_results = bpy.props.CollectionProperty(type=cls)
+    @classmethod
+    def unregister(cls):
+        del bpy.types.Scene.prd_designer_results
+
     num_prim_roots: bpy.props.IntProperty(
         name='num_prim_roots',
         min=-1,
@@ -811,18 +847,8 @@ bl_classes = [
 def register():
     for cls in bl_classes:
         bpy.utils.register_class(cls)
-    PrdSceneProps.builder_props = bpy.props.PointerProperty(type=PrdBuilderProps)
-    bpy.types.Scene.prd_data = bpy.props.PointerProperty(type=PrdSceneProps)
-    bpy.types.Scene.prd_designer_props = bpy.props.PointerProperty(type=PrdDesignerProps)
-    bpy.types.Scene.prd_designer_results = bpy.props.CollectionProperty(type=PrdDesignerResultProps)
-    bpy.types.Object.prd_data = bpy.props.PointerProperty(type=PrdWellProps)
 
 def unregister():
-    del PrdSceneProps.builder_props
-    del bpy.types.Object.prd_data
-    del bpy.types.Scene.prd_designer_results
-    del bpy.types.Scene.prd_designer_props
-    del bpy.types.Scene.prd_data
     for cls in reversed(bl_classes):
         bpy.utils.unregister_class(cls)
 
