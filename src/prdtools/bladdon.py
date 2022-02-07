@@ -555,6 +555,7 @@ class PrdBuilderOp(bpy.types.Operator):
         bpy.ops.mesh.primitive_cube_add(size=width)
         base_cube = context.active_object
         base_cube.name = 'Well.Base'
+        base_cube.data.name = 'Well.Base'
         base_cube.prd_data.is_base_obj = True
         base_cube.active_material = scene_props.material
         move_to_collection(base_cube, base_coll)
@@ -593,6 +594,8 @@ class PrdBuilderOp(bpy.types.Operator):
                 obj.prd_data.height = well_height
                 obj.prd_data.is_well_obj = True
                 obj.name = f'Well.{row_idx:02d}.{col_idx:02d}'
+                if instance_mode == 'OBJECT_DATA':
+                    obj.data.name = obj.name
         if instance_mode != 'COLLECTION':
             base_coll.hide_viewport = True
 
