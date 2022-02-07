@@ -312,14 +312,6 @@ class PrdDesignerOp(bpy.types.Operator):
     bl_idname='prdutils.design'
     bl_label='Design PRD Parameters'
 
-    action: bpy.props.EnumProperty(
-        items=[
-            ('NORMAL', 'normal', 'normal'),
-            ('RESET', 'reset', 'reset'),
-        ],
-        default='NORMAL',
-    )
-
     @classmethod
     def poll(cls, context):
         designer_props = context.scene.prd_designer_props
@@ -327,7 +319,7 @@ class PrdDesignerOp(bpy.types.Operator):
 
     def execute(self, context):
         designer_props = context.scene.prd_designer_props
-        if self.action == 'RESET':
+        if designer_props.state == 'RESET':
             self.reset_props(context)
             designer_props.state = 'INITIAL'
         elif designer_props.state == 'INITIAL':
@@ -414,7 +406,9 @@ class PrdDesignerResetOp(bpy.types.Operator):
     bl_label = 'Reset'
 
     def execute(self, context):
-        bpy.ops.prdutils.design('EXEC_DEFAULT', action='RESET')
+        designer_props = context.scene.prd_designer_props
+        designer_props.state = 'RESET'
+        bpy.ops.prdutils.design('INVOKE_DEFAULT')
         return {'FINISHED'}
 
 class PrdDesignerNextIndex(bpy.types.Operator):
