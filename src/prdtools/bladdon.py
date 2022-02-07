@@ -10,6 +10,7 @@ bl_info = {
 
 import json
 import bpy
+import bmesh
 
 from .table import TableParameters, TableResult, ValidationError
 from .designer import Designer
@@ -150,6 +151,7 @@ class PrdWellProps(bpy.types.PropertyGroup):
         name='Is Well Obj',
         default=False,
     )
+    is_bbox: bpy.props.BoolProperty(default=False)
     row: bpy.props.IntProperty(name='Row', default=-1)
     column: bpy.props.IntProperty(name='Column', default=-1)
     height: bpy.props.FloatProperty(
@@ -551,6 +553,9 @@ class PrdBuilderOp(bpy.types.Operator):
         base_coll, obj_coll = scene_props.base_coll, scene_props.obj_coll
         base_coll.hide_viewport = False
         empty_size = width
+        context.scene.cursor.location = [0, 0, 0]
+
+        bbox = self.build_bbox(context)
 
         bpy.ops.mesh.primitive_cube_add(size=width)
         base_cube = context.active_object
@@ -560,7 +565,6 @@ class PrdBuilderOp(bpy.types.Operator):
         base_cube.active_material = scene_props.material
         move_to_collection(base_cube, base_coll)
 
-        context.scene.cursor.location = [0, 0, 0]
         base_cube.location.z = half_width
         bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
         base_cube.dimensions.z = 1
@@ -578,13 +582,12 @@ class PrdBuilderOp(bpy.types.Operator):
                     obj = context.active_object
                     obj.empty_display_size = empty_size
                 elif instance_mode == 'OBJECT':
-                    bpy.ops.object.duplicate(linked=True)
-                    obj = context.active_object
+                    obj = base_cube.copy()
                 elif instance_mode == 'OBJECT_DATA':
-                    bpy.ops.object.duplicate(linked=False)
-                    obj = context.active_object
+                    obj = base_cube.copy()
                     obj.data = obj.data.copy()
                 move_to_collection(obj, obj_coll)
+                obj.parent = bbox
 
                 obj.location.x = x
                 obj.location.y = y
@@ -598,6 +601,28 @@ class PrdBuilderOp(bpy.types.Operator):
                     obj.data.name = obj.name
         if instance_mode != 'COLLECTION':
             base_coll.hide_viewport = True
+
+    def build_bbox(self, context):
+        scene_props = context.scene.prd_data
+
+        bpy.ops.mesh.primitive_cube_add(size=1)
+        bbox = context.active_object
+        bbox.name = 'Prd Diffuser'
+        bbox.data.name = bbox.name
+
+        bbox_mesh = bbox.data
+        bm = bmesh.new()
+        bm.from_mesh(bbox_mesh)
+        bmesh.ops.delete(bm, geom=bm.faces, context='FACES_ONLY')
+        bm.to_mesh(bbox_mesh)
+        bbox_mesh.update()
+
+        bbox.location = [x / 2 for x in scene_props.array_dimensions]
+        bbox.dimensions = scene_props.array_dimensions
+        bpy.ops.object.transform_apply(location=True, properties=False)
+        bbox.prd_data.is_bbox = True
+        move_to_collection(bbox, scene_props.obj_coll)
+        return bbox
 
 class PrdBuilderClear(bpy.types.Operator):
     """Delete all built objects"""
