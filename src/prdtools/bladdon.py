@@ -309,6 +309,7 @@ class PrdDesignerResultProps(bpy.types.PropertyGroup):
     )
 
 class PrdDesignerOp(bpy.types.Operator):
+    """Find design results from the given parameters"""
     bl_idname='prdutils.design'
     bl_label='Design PRD Parameters'
 
@@ -371,6 +372,7 @@ class PrdDesignerOp(bpy.types.Operator):
             setattr(designer_props, key, val)
 
 class PrdDesignerBuildOp(bpy.types.Operator):
+    """Build the current design"""
     bl_idname = 'prdutils.design_build'
     bl_label = 'Build'
 
@@ -402,6 +404,7 @@ class PrdDesignerBuildOp(bpy.types.Operator):
         return {'FINISHED'}
 
 class PrdDesignerResetOp(bpy.types.Operator):
+    """Reset design parameters"""
     bl_idname = 'prdutils.design_reset'
     bl_label = 'Reset'
 
@@ -420,6 +423,7 @@ class PrdDesignerResetOp(bpy.types.Operator):
         return {'FINISHED'}
 
 class PrdDesignerNextIndex(bpy.types.Operator):
+    """Show the next set of design parameters"""
     bl_idname = 'prdutils.design_next_index'
     bl_label = 'Next result index'
 
@@ -441,6 +445,7 @@ class PrdDesignerNextIndex(bpy.types.Operator):
         return {'FINISHED'}
 
 class PrdDesignerPrevIndex(bpy.types.Operator):
+    """Show the previous set of design parameters"""
     bl_idname = 'prdutils.design_prev_index'
     bl_label = 'Previous result index'
 
@@ -461,8 +466,7 @@ class PrdDesignerPrevIndex(bpy.types.Operator):
         return {'FINISHED'}
 
 class PrdBuilderOp(bpy.types.Operator):
-    """Build an array of cubes matching the wells from a PRD table
-    """
+    """Build an array of cubes matching the wells from a PRD table"""
     bl_idname = "prdutils.build"
     bl_label = 'Build PRD Scene'
 
@@ -582,6 +586,7 @@ class PrdBuilderOp(bpy.types.Operator):
             base_coll.hide_viewport = True
 
 class PrdBuilderClear(bpy.types.Operator):
+    """Delete all built objects"""
     bl_idname = 'prdutils.clear'
     bl_label = 'Clear Objects'
 
@@ -609,6 +614,7 @@ class PrdBuilderClear(bpy.types.Operator):
 
 
 class PrdSceneMaterialNew(bpy.types.Operator):
+    """New Material"""
     bl_idname = 'prdutils.scene_material_new'
     bl_label = 'Add Material'
 
@@ -718,7 +724,6 @@ class PrdDesignerPanel(bpy.types.Panel):
             box.operator(PrdDesignerResetOp.bl_idname)
 
         if designer_props.state != 'INITIAL':
-            box = main_box.box()
             grid = box.grid_flow(
                 row_major=True, columns=2, even_columns=True, align=False,
             )
@@ -747,11 +752,10 @@ class PrdDesignerPanel(bpy.types.Panel):
             grid.prop(build_settings, 'instance_mode', text='')
 
         box = main_box.box()
-        box.label(text='Material')
         box.template_ID(scene_props, 'material', new=PrdSceneMaterialNew.bl_idname)
 
         if designer_props.state == 'RESULTS_BUILT':
-            row = main_box.row()
+            row = box.row()
             row.operator(PrdDesignerBuildOp.bl_idname)
             row.operator(PrdBuilderClear.bl_idname)
         elif designer_props.state != 'INITIAL':
