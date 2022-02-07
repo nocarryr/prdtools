@@ -405,6 +405,14 @@ class PrdDesignerResetOp(bpy.types.Operator):
     bl_idname = 'prdutils.design_reset'
     bl_label = 'Reset'
 
+    @classmethod
+    def poll(cls, context):
+        designer_props = context.scene.prd_designer_props
+        if designer_props.state != 'RESULTS_BUILT':
+            return False
+        build_settings = context.scene.prd_data.builder_props
+        return build_settings.state == 'INITIAL'
+
     def execute(self, context):
         designer_props = context.scene.prd_designer_props
         designer_props.state = 'RESET'
